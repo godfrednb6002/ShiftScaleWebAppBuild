@@ -54,6 +54,18 @@ Monorepo containing React frontend and FastAPI backend.
    References: [NASA SMAP](https://www.earthdata.nasa.gov/data/platforms/space-based-platforms/smap)
    and [NASA GIBS WMTS capabilities](https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/wmts.cgi?SERVICE=WMTS&REQUEST=GetCapabilities).
 
+   Landsat/MODIS vegetation map metadata is exposed at
+   `GET /api/landsat-modis/layers`, with an optional `date=YYYY-MM-DD` query.
+   The catalog includes MODIS Terra 8-day NDVI and EVI layers and Landsat 8/9
+   HLS surface-reflectance imagery. GIBS tiles are public rendered imagery; they
+   do not expose numeric pixel values or reflectance bands. BSI, canopy metrics,
+   bare-fallow detection, and cover-crop validation therefore still require
+   numeric imagery access and processing.
+
+   References: [USGS Landsat EarthExplorer](https://earthexplorer.usgs.gov/),
+   [MODIS LP DAAC products](https://lpdaac.usgs.gov/products/), and
+   [NASA GIBS WMTS capabilities](https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/wmts.cgi?SERVICE=WMTS&REQUEST=GetCapabilities).
+
 ### 2. Frontend (React + Vite)
 
 1. Navigate to `Frontend`:

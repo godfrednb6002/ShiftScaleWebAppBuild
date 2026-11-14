@@ -33,6 +33,38 @@ SMAP_LAYERS = {
         },
     },
 }
+VEGETATION_LAYERS = {
+    "modis_ndvi": {
+        "dataset": "MODIS Terra 8-Day Vegetation Index",
+        "layer_id": "MODIS_Terra_NDVI_8Day",
+        "platform": "Terra MODIS",
+        "metric": "NDVI",
+        "temporal_resolution": "rolling 8-day composite",
+        "tile_matrix_set": "GoogleMapsCompatible_Level9",
+        "tile_format": "image/png",
+        "max_zoom": 9,
+    },
+    "modis_evi": {
+        "dataset": "MODIS Terra 8-Day Enhanced Vegetation Index",
+        "layer_id": "MODIS_Terra_EVI_8Day",
+        "platform": "Terra MODIS",
+        "metric": "EVI",
+        "temporal_resolution": "rolling 8-day composite",
+        "tile_matrix_set": "GoogleMapsCompatible_Level9",
+        "tile_format": "image/png",
+        "max_zoom": 9,
+    },
+    "landsat_reflectance": {
+        "dataset": "Harmonized Landsat Sentinel-2 Landsat Nadir BRDF-Adjusted Reflectance",
+        "layer_id": "HLS_L30_Nadir_BRDF_Adjusted_Reflectance",
+        "platform": "Landsat 8/9 OLI",
+        "metric": "surface reflectance",
+        "temporal_resolution": "observation-based",
+        "tile_matrix_set": "GoogleMapsCompatible_Level12",
+        "tile_format": "image/png",
+        "max_zoom": 12,
+    },
+}
 
 # CORS setup
 origins = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
@@ -133,3 +165,72 @@ def get_smap_root_zone_layer(
 ):
     """Return public NASA GIBS tile configuration for the SMAP L4 root-zone product."""
     return _smap_layer_response("root_zone", observation_date)
+
+
+def _vegetation_layer_response(
+    product: str,
+    observation_date: date | None,
+) -> dict:
+    layer = VEGETATION_LAYERS[product]
+    date_segment = f"{observation_date.isoformat()}/" if observation_date else ""
+    tile_url_template = (
+        f"{GIBS_TILE_BASE_URL}/{layer['layer_id']}/default/"
+        f"{date_segment}{layer['tile_matrix_set']}/{{z}}/{{y}}/{{x}}."
+        f"{layer['tile_format'].removeprefix('image/')}"
+    )
+
+    return {
+        "product": product,
+        "dataset": layer["dataset"],
+        "layer_id": layer["layer_id"],
+        "platform": layer["platform"],
+        "metric": layer["metric"],
+        "temporal_resolution": layer["temporal_resolution"],
+        "provider": "NASA EOSDIS Global Imagery Browse Services (GIBS)",
+        "protocol": "WMTS",
+        "representation": "rendered-map-tiles",
+        "numeric_values_available": False,
+        "tile_url_template": tile_url_template,
+        "tile_matrix_set": layer["tile_matrix_set"],
+        "tile_format": layer["tile_format"],
+        "min_zoom": 0,
+        "max_zoom": layer["max_zoom"],
+        "observation_date": observation_date.isoformat() if observation_date else None,
+        "date_behavior": (
+            "Requested date; imagery follows the product's temporal resolution"
+            if observation_date
+            else "NASA GIBS default observation date"
+        ),
+        "requires_api_key": False,
+        "limitations": [
+            "Tiles are rendered imagery and do not provide numeric per-pixel values or reflectance bands.",
+            "Bare Soil Index (BSI), canopy metrics, bare-fallow detection, and cover-crop validation are not calculated.",
+        ],
+        "references": {
+            "gibs_wmts": "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/wmts.cgi?SERVICE=WMTS&REQUEST=GetCapabilities",
+            "landsat": "https://earthexplorer.usgs.gov/",
+            "modis": "https://lpdaac.usgs.gov/products/",
+        },
+    }
+
+
+@app.get("/api/landsat-modis/layers", tags=["Earth observation"])
+def get_landsat_modis_layers(
+    observation_date: date | None = Query(default=None, alias="date"),
+):
+    """Return public NASA GIBS vegetation and Landsat reflectance tile configurations."""
+    return {
+        "layers": [
+            _vegetation_layer_response(product, observation_date)
+            for product in VEGETATION_LAYERS
+        ],
+        "derived_metrics": {
+            "ndvi": "MODIS Terra NDVI map layer is available as rendered imagery.",
+            "evi": "MODIS Terra EVI map layer is available as rendered imagery.",
+            "bsi": "Not available from these rendered GIBS tiles; requires numeric surface-reflectance bands.",
+            "canopy_cover": "Not calculated; requires numeric imagery and a validated method.",
+            "bare_fallow_exposure": "Not calculated; requires numeric imagery and field/time-series rules.",
+            "cover_crop_validation": "Not calculated; requires field boundaries and numeric imagery.",
+        },
+        "requires_api_key": False,
+    }
