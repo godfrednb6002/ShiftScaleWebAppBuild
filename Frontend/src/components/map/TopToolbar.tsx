@@ -6,7 +6,6 @@ interface TopToolbarProps {
   basemap: 'street' | 'satellite' | 'terrain';
   basemapOptions: Array<{ value: 'street' | 'satellite' | 'terrain'; label: string }>;
   onBasemapChange: (value: 'street' | 'satellite' | 'terrain') => void;
-  coordinates: { lat: number; lng: number } | null;
   onResetView: () => void;
   onSearch: (query: string) => void;
   selectedFarm?: Farm | null;
@@ -21,7 +20,6 @@ export const TopToolbar: React.FC<TopToolbarProps> = ({
   basemap,
   basemapOptions,
   onBasemapChange,
-  coordinates,
   onResetView,
   onSearch,
   searchQuery,
@@ -101,21 +99,6 @@ export const TopToolbar: React.FC<TopToolbarProps> = ({
             ))}
           </select>
         </div>
-
-        {coordinates && (
-          <div
-            className={`hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl border text-[11px] font-mono shadow-sm transition-colors ${
-              isDarkMode
-                ? 'bg-black/35 border-white/10 text-slate-300'
-                : 'bg-white/45 border-white/60 text-[#112314]'
-            }`}
-          >
-            <span>
-              {coordinates.lat.toFixed(3)}°{coordinates.lat >= 0 ? 'N' : 'S'},{' '}
-              {Math.abs(coordinates.lng).toFixed(3)}°{coordinates.lng >= 0 ? 'E' : 'W'}
-            </span>
-          </div>
-        )}
 
         <button
           onClick={onResetView}

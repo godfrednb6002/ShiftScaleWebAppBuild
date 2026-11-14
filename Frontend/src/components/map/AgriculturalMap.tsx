@@ -112,7 +112,6 @@ interface AgriculturalMapProps {
   location: LocationState;
   selected?: FarmLocation | null;
   onLocationSelect?: (location: FarmLocation) => void;
-  onCoordsChange?: (lat: number, lng: number) => void;
   className?: string;
   selectedFarm: Farm | null;
   checkpoints: Checkpoint[];
@@ -219,13 +218,6 @@ const MapClickListener: React.FC<{
   return null;
 };
 
-const MapMoveListener: React.FC<{
-  onMove: (event: L.LeafletEvent) => void;
-}> = ({ onMove }) => {
-  useMapEvents({ moveend: onMove });
-  return null;
-};
-
 /** Imperatively manages NASA GIBS overlay tile layers. */
 const NasaOverlayLayers: React.FC<{
   activeLayers: ActiveLayer[];
@@ -325,7 +317,6 @@ export const AgriculturalMap: React.FC<AgriculturalMapProps> = ({
   location,
   selected,
   onLocationSelect,
-  onCoordsChange,
   className,
   selectedFarm,
   checkpoints,
@@ -377,17 +368,6 @@ export const AgriculturalMap: React.FC<AgriculturalMapProps> = ({
   }, []);
 
   const handleTileRetry = useCallback(() => setTileError(false), []);
-
-  const onMove = useCallback(
-    (event: L.LeafletEvent) => {
-      const map = event.target as L.Map;
-      const c = map.getCenter();
-      if (onCoordsChange) {
-        onCoordsChange(c.lat, c.lng);
-      }
-    },
-    [onCoordsChange]
-  );
 
   const finishDrawing = useCallback(() => {
     if (drawingVertices.length < 3) {
@@ -447,7 +427,6 @@ export const AgriculturalMap: React.FC<AgriculturalMapProps> = ({
           onStatusChange={onLayerStatusChange}
         />
         <MapClickListener onMapClick={handleMapClick} />
-        <MapMoveListener onMove={onMove} />
 
         {/* Single unified location marker with radar pulse */}
         {activeLocation && !selectedFarm && (
