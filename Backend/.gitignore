@@ -1,0 +1,11 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.env
+
+# NASA raw data can be large and should not be committed.
+/data/nasa/power/raw/*
+!/data/nasa/power/raw/.gitkeep
+/data/nasa/gpm/raw/*
+!/data/nasa/gpm/raw/.gitkeep
