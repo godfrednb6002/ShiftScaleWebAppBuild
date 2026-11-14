@@ -136,7 +136,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             }`}
           >
             {activeNav === 'Map'
-              ? 'Field Map & Vulnerability Analyzer'
+              ? 'Interactive Field & Satellite Map'
               : activeNav === 'Profile'
                 ? 'Farmer Profile & Portfolio'
                 : activeNav === 'Settings'
