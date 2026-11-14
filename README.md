@@ -6,14 +6,17 @@ Monorepo containing React frontend and FastAPI backend.
 
 ```
 ├── Backend/
+│   ├── app/                  # Modular application package
+│   │   ├── api/              # API router definitions & versioned endpoints (v1)
+│   │   ├── core/             # Configuration, settings & constants
+│   │   ├── schemas/          # Pydantic models & request/response schemas
+│   │   ├── services/         # Business logic layer
+│   │   └── main.py           # FastAPI app factory
 │   ├── .venv/                # Python virtual environment (ignored by Git)
 │   ├── .env                  # Environment secrets (ignored by Git)
 │   ├── .env.example          # Example environment variables
 │   ├── requirements.txt      # Python dependencies
-│   ├── main.py               # FastAPI / Uvicorn entry point
-│   └── app/
-│       ├── api/              # API router and endpoint modules
-│       └── core/             # Application configuration
+│   └── main.py               # Application entry point (uvicorn runner)
 ├── Frontend/
 │   ├── node_modules/         # Node dependencies (ignored by Git)
 │   ├── .env                  # Frontend environment variables (ignored by Git)
@@ -71,6 +74,16 @@ Monorepo containing React frontend and FastAPI backend.
    References: [USGS Landsat EarthExplorer](https://earthexplorer.usgs.gov/),
    [MODIS LP DAAC products](https://lpdaac.usgs.gov/products/), and
    [NASA GIBS WMTS capabilities](https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/wmts.cgi?SERVICE=WMTS&REQUEST=GetCapabilities).
+
+   GAEZ metadata is exposed at `GET /api/gaez/catalog`. This global catalog
+   describes GAEZ v5, its Length of Growing Period and agro-ecological
+   indicators, and the historical/projection climate inputs. It does not yet
+   retrieve regional indicator values or generate Major/Minor season calendars;
+   those require location-specific data and validation. No API key is needed
+   for this metadata endpoint.
+
+   References: [FAO GAEZ v5 platform](https://data.apps.fao.org/gaez/?lang=en)
+   and [FAO GAEZ overview](https://www.fao.org/gaez/en/).
 
 ### 2. Frontend (React + Vite)
 
