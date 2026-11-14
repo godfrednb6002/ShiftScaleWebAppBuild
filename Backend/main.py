@@ -1,3 +1,4 @@
+
 import os
 from typing import Literal
 from uuid import UUID, uuid4
@@ -211,3 +212,6 @@ def get_ecostress_catalog():
 @app.post("/api/assessments/ecostress", response_model=AssessmentResponse)
 def create_ecostress_assessment(observation: FieldObservation):
     return build_assessment(observation)
+from app.main import app
+
+__all__ = ["app"]
