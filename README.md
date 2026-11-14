@@ -39,6 +39,21 @@ Monorepo containing React frontend and FastAPI backend.
    ```
    Interactive API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
+   NASA SMAP tile metadata is exposed at `GET /api/smap/layers` (both layers),
+   `GET /api/smap/layer` (surface), and `GET /api/smap/layer/root-zone`. The
+   public NASA GIBS WMTS tiles do not require an API key. An optional
+   `date=YYYY-MM-DD` query selects an observation date; without it, GIBS uses
+   each layer's default observation date.
+
+   Surface moisture is from the SMAP L3 passive radiometer product. Root-zone
+   moisture is a model-derived SMAP L4 product, expressed as volumetric moisture
+   (`m^3/m^3`), not saturation percentage. Both endpoints provide rendered
+   imagery, not numeric per-pixel measurements. Drought scoring and irrigation
+   alerts are not included yet.
+
+   References: [NASA SMAP](https://www.earthdata.nasa.gov/data/platforms/space-based-platforms/smap)
+   and [NASA GIBS WMTS capabilities](https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/wmts.cgi?SERVICE=WMTS&REQUEST=GetCapabilities).
+
 ### 2. Frontend (React + Vite)
 
 1. Navigate to `Frontend`:
