@@ -4,11 +4,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
 from app.core.config import settings
-from app.schemas.earth_data import HealthResponse, RootResponse
+from app.core.logging import configure_logging
+from app.schemas.earth_data import RootResponse
 
 
 def create_application() -> FastAPI:
     """Build and configure the FastAPI application."""
+    configure_logging()
+
     application = FastAPI(
         title=settings.app_name,
         version=settings.app_version,
@@ -23,16 +26,15 @@ def create_application() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Core health & root endpoints
+    # Root endpoint
     @application.get("/", response_model=RootResponse, tags=["General"])
     def read_root():
         return {"message": "ShiftScale Backend is running!", "status": "healthy"}
 
-    @application.get("/api/health", response_model=HealthResponse, tags=["General"])
-    def health_check():
-        return {"status": "ok"}
-
-    # Include modular API v1 routers under /api
+    # Include API routes under /api
     application.include_router(api_router, prefix="/api")
 
     return application
+
+
+app = create_application()
