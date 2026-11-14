@@ -59,7 +59,7 @@ export const LocationPrompt: React.FC<LocationPromptProps> = ({
                 isDarkMode ? 'text-slate-300' : 'text-[#34533a]/80'
               }`}
             >
-              Automatically center on your farming land to retrieve NASA satellite soil moisture, elevation slope, and climate adaptation insights.
+              ShiftScale only requests your device location if you choose to use it. You can decline and select a farm location manually instead.
             </p>
           </div>
         </div>
@@ -97,7 +97,7 @@ export const LocationPrompt: React.FC<LocationPromptProps> = ({
             }`}
           >
             <MapPin className="w-4 h-4 shrink-0 text-emerald-600" />
-            <span>Select Location Manually on Map</span>
+            <span>No, select my location manually</span>
           </button>
         </div>
 
@@ -107,7 +107,7 @@ export const LocationPrompt: React.FC<LocationPromptProps> = ({
           }`}
         >
           <Sparkles className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-          <span>The camera will glide smoothly into your location automatically.</span>
+          <span>Your device location is never accessed in the background.</span>
         </div>
       </div>
     </div>

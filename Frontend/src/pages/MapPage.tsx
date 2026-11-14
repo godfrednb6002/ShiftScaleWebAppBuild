@@ -28,27 +28,6 @@ import { CheckpointForm } from '../components/map/CheckpointForm';
 import { useApp } from '../context/useApp';
 
 const ALL_NASAS_LAYERS = [...NASAS_LAYERS, ...NASAS_LAYERS_UNAVAILABLE];
-const MAP_FARMS_STORAGE_KEY = 'shiftscale_map_farms';
-
-function readSavedFarms(): Farm[] {
-  try {
-    const stored = localStorage.getItem(MAP_FARMS_STORAGE_KEY);
-    if (!stored) return [];
-    const farms: unknown = JSON.parse(stored);
-    return Array.isArray(farms) ? (farms as Farm[]) : [];
-  } catch (error) {
-    console.warn('Could not read saved map farms:', error);
-    return [];
-  }
-}
-
-function saveFarms(farms: Farm[]): void {
-  try {
-    localStorage.setItem(MAP_FARMS_STORAGE_KEY, JSON.stringify(farms));
-  } catch (error) {
-    console.error('Could not save map farms:', error);
-  }
-}
 
 const GHANA_LOCATIONS: Record<
   string,
@@ -94,17 +73,23 @@ export const MapPage: React.FC<MapPageProps> = ({
   onSelectNav,
   embedded = false,
 }) => {
-  const { defaultFarm } = useApp();
-  const [savedFarms, setSavedFarms] = useState<Farm[]>(readSavedFarms);
-  const [selectedFarm, setSelectedFarm] = useState<Farm | null>(
-    savedFarms[0] ?? null
+  const {
+    defaultFarm,
+    addFarm,
+    updateFarm,
+    appPreferences,
+    locationPreferences,
+    updateLocationPreferences,
+  } = useApp();
+  const [selectedFarm, setSelectedFarm] = useState<Farm | null>(defaultFarm);
+  const initialLocation = defaultFarm.center;
+  const [basemap, setBasemap] = useState<'street' | 'satellite' | 'terrain'>(
+    appPreferences.defaultBasemap
   );
-  const initialLocation = selectedFarm?.center ?? defaultFarm.center;
-  const [basemap, setBasemap] = useState<'street' | 'satellite' | 'terrain'>('street');
   const [activeLayers, setActiveLayers] = useState<ActiveLayer[]>(
     NASAS_LAYERS.map((l) => ({
       id: l.id,
-      enabled: false,
+      enabled: appPreferences.defaultMapLayer === l.id,
       opacity: 0.6,
     }))
   );
@@ -119,23 +104,17 @@ export const MapPage: React.FC<MapPageProps> = ({
     source: 'manual',
   }));
   const [selected, setSelected] = useState<FarmLocation | null>(initialLocation);
-  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(() =>
-    initialLocation
-  );
   const [searchQuery, setSearchQuery] = useState('');
   const [resetView, setResetView] = useState(0);
 
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
   const [drawing, setDrawing] = useState(false);
   const [showLocationPrompt, setShowLocationPrompt] = useState(() => {
-    try {
-      if (localStorage.getItem('fieldshift_location_allowed') === 'true') {
-        return false;
-      }
-    } catch {
-      // ignore
-    }
-    return true;
+    return (
+      !locationPreferences.hasAllowedLocation &&
+      locationPreferences.permissionStatus === 'idle' &&
+      locationPreferences.preferredDetectionMode === 'default-farm'
+    );
   });
   const [showCheckpointForm, setShowCheckpointForm] = useState(false);
   const [isManualPicking, setIsManualPicking] = useState(false);
@@ -196,10 +175,6 @@ export const MapPage: React.FC<MapPageProps> = ({
     }));
   }, []);
 
-  const onCoordsChange = useCallback((lat: number, lng: number) => {
-    setCoordinates({ lat, lng });
-  }, []);
-
   const onSearch = useCallback((query: string) => {
     const clean = query.trim().toLowerCase();
     if (!clean) return;
@@ -242,8 +217,7 @@ export const MapPage: React.FC<MapPageProps> = ({
         lat: sumLat / rings.length,
         lng: sumLng / rings.length,
       };
-      const farm: Farm = {
-        id: `farm-${Date.now()}`,
+      const farm = addFarm({
         name: `Farm #${Math.floor(100 + Math.random() * 900)}`,
         boundary,
         areaHectares: areaHa,
@@ -251,21 +225,13 @@ export const MapPage: React.FC<MapPageProps> = ({
         dominantCrop: 'Maize & Cassava',
         farmingSystem: 'Rainfed',
         region: isWithinGhanaBounds(center.lat, center.lng) ? 'Ghana' : undefined,
-        district: undefined,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
         center,
-      };
-      setSavedFarms((prev) => {
-        const next = [farm, ...prev];
-        saveFarms(next);
-        return next;
       });
       setSelectedFarm(farm);
       setSelected(center);
       setDrawing(false);
     },
-    []
+    [addFarm]
   );
 
   const onCancelDrawing = useCallback(() => {
@@ -278,20 +244,14 @@ export const MapPage: React.FC<MapPageProps> = ({
 
   const onFarmRenamed = useCallback(
     (farmId: string, newName: string) => {
-      const updatedFarms = savedFarms.map((farm) =>
-        farm.id === farmId
-          ? { ...farm, name: newName, updatedAt: new Date().toISOString() }
-          : farm
-      );
-      setSavedFarms(updatedFarms);
-      saveFarms(updatedFarms);
+      updateFarm(farmId, { name: newName });
       setSelectedFarm((farm) =>
         farm?.id === farmId
           ? { ...farm, name: newName, updatedAt: new Date().toISOString() }
           : farm
       );
     },
-    [savedFarms]
+    [updateFarm]
   );
 
   const readings: VulnerabilityReading[] = useMemo(() => {
@@ -371,40 +331,47 @@ export const MapPage: React.FC<MapPageProps> = ({
         district: null,
         errorMessage: null,
       }));
-      try {
-        localStorage.setItem('fieldshift_location_allowed', 'true');
-      } catch {
-        // ignore
-      }
+      updateLocationPreferences({
+        permissionStatus: 'granted',
+        preferredDetectionMode: 'gps',
+        hasAllowedLocation: true,
+        lastKnownGps: {
+          lat: pos.lat,
+          lng: pos.lng,
+          accuracy: pos.accuracyMeters,
+          timestamp: pos.timestamp,
+        },
+      });
       setShowLocationPrompt(false);
-      setIsLocating(false);
       setHciMessage('📍 GPS position locked! Flying to your location…');
       setTimeout(() => setHciMessage(null), 3500);
-    } catch {
-      // Graceful HCI fallback: if browser GPS is blocked, timed out, or unavailable,
-      // never leave the user frozen. Auto-glide to Ghana's farming hub (Kumasi) so something always moves!
-      const fallbackLoc = { lat: 6.6885, lng: -1.6244 };
-      setSelected(fallbackLoc);
+    } catch (error: unknown) {
+      const reason = error instanceof Error ? error.message : 'unavailable';
+      const status =
+        reason === 'denied' || reason === 'timeout' ? reason : 'unavailable';
+      const message =
+        status === 'denied'
+          ? 'Location access was denied. You can still select a farm location manually.'
+          : status === 'timeout'
+            ? 'GPS timed out. You can retry or select a farm location manually.'
+            : 'GPS is unavailable. You can retry or select a farm location manually.';
       setLocation((prev) => ({
         ...prev,
-        userLocation: fallbackLoc,
-        farmLocation: fallbackLoc,
-        source: 'gps',
-        status: 'confirmed',
-        region: 'Ashanti (Kumasi)',
-        errorMessage: 'GPS signal slow/blocked — auto-focused on Kumasi, Ghana.',
+        userLocation: null,
+        status,
+        errorMessage: message,
       }));
-      try {
-        localStorage.setItem('fieldshift_location_allowed', 'true');
-      } catch {
-        // ignore
-      }
+      updateLocationPreferences({
+        permissionStatus: status,
+        preferredDetectionMode: 'manual',
+        hasAllowedLocation: false,
+      });
       setShowLocationPrompt(false);
+      setHciMessage(message);
+    } finally {
       setIsLocating(false);
-      setHciMessage('📍 Auto-focused on Kumasi, Ghana. You can tap anywhere to adjust.');
-      setTimeout(() => setHciMessage(null), 4000);
     }
-  }, []);
+  }, [updateLocationPreferences]);
 
   const useCurrentAsFarm = useCallback(() => {
     if (!location.userLocation) return;
@@ -454,7 +421,6 @@ export const MapPage: React.FC<MapPageProps> = ({
             basemap={basemap}
             basemapOptions={basemapOptions}
             onBasemapChange={setBasemap}
-            coordinates={coordinates}
             onResetView={onResetView}
             onSearch={onSearch}
             selectedFarm={selectedFarm}
@@ -548,7 +514,6 @@ export const MapPage: React.FC<MapPageProps> = ({
               location={location}
               selected={selected}
               onLocationSelect={onLocationSelect}
-              onCoordsChange={onCoordsChange}
               selectedFarm={selectedFarm}
               checkpoints={checkpoints}
               drawing={drawing}
@@ -609,21 +574,19 @@ export const MapPage: React.FC<MapPageProps> = ({
         <LocationPrompt
           onUseCurrent={handleLocateMe}
           onSelectManually={() => {
-            try {
-              localStorage.setItem('fieldshift_location_allowed', 'true');
-            } catch {
-              // ignore
-            }
+            updateLocationPreferences({
+              preferredDetectionMode: 'manual',
+              hasAllowedLocation: false,
+            });
             setShowLocationPrompt(false);
             setIsManualPicking(true);
             setLocation((prev) => ({ ...prev, status: 'idle' }));
           }}
           onClose={() => {
-            try {
-              localStorage.setItem('fieldshift_location_allowed', 'true');
-            } catch {
-              // ignore
-            }
+            updateLocationPreferences({
+              preferredDetectionMode: 'manual',
+              hasAllowedLocation: false,
+            });
             setShowLocationPrompt(false);
           }}
           isLocating={isLocating}
