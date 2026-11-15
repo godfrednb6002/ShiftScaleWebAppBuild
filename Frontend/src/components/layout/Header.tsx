@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, User, X } from 'lucide-react';
+import { CircleHelp, Menu, User, X } from 'lucide-react';
 import { useApp } from '../../context/useApp';
 
 interface HeaderProps {
@@ -8,6 +8,7 @@ interface HeaderProps {
   onNavigateProfile?: () => void;
   onToggleMobileDrawer?: () => void;
   isMobileDrawerOpen?: boolean;
+  onOpenWalkthrough?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -16,6 +17,7 @@ export const Header: React.FC<HeaderProps> = ({
   onNavigateProfile,
   onToggleMobileDrawer,
   isMobileDrawerOpen = false,
+  onOpenWalkthrough,
 }) => {
   const { account } = useApp();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -143,6 +145,22 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         )}
       </div>
+      {onOpenWalkthrough && (
+        <button
+          type="button"
+          onClick={onOpenWalkthrough}
+          aria-label="Open ShiftScale walkthrough"
+          title="App walkthrough"
+          className={`ml-auto inline-flex shrink-0 items-center gap-2 rounded-xl border px-2.5 py-2 text-sm font-semibold transition-colors sm:px-3 ${
+            isDarkMode
+              ? 'border-white/10 bg-white/5 text-emerald-300 hover:bg-white/10'
+              : 'border-[#cfe0cd] bg-[#e8f1e5] text-[#244b2c] hover:bg-[#dbe9d7]'
+          }`}
+        >
+          <CircleHelp className="h-4 w-4" aria-hidden="true" />
+          <span className="hidden sm:inline">Walkthrough</span>
+        </button>
+      )}
 
     </div>
   );

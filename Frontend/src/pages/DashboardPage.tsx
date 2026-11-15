@@ -2,10 +2,10 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { CloudSun, Radio } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { Sidebar } from '../components/layout/Sidebar';
+import { Walkthrough, type WalkthroughMode } from '../components/layout/Walkthrough';
 import { MetricButtons } from '../components/dashboard/MetricButtons';
 import { HeroForecastCard } from '../components/dashboard/HeroForecastCard';
 import { MetricBreakdownPanel } from '../components/dashboard/MetricBreakdownPanel';
-import { PredictiveAnalytics } from '../components/dashboard/PredictiveAnalytics';
 import { WEATHER_METRICS_DATA } from '../constants/metricsData';
 import { NAV_ITEMS } from '../constants/navigation';
 import { WEATHER_PROFILES } from '../constants/weatherProfiles';
@@ -46,6 +46,16 @@ function toDateInputValue(date: Date): string {
 }
 
 const EMPTY_CLIMATE_RECORDS: DailyClimateRecord[] = [];
+const WALKTHROUGH_SEEN_KEY = 'shiftscale_app_walkthrough_seen_v1';
+
+function hasSeenWalkthrough(): boolean {
+  try {
+    return localStorage.getItem(WALKTHROUGH_SEEN_KEY) === 'true';
+  } catch (error) {
+    console.warn('Could not read the walkthrough preference:', error);
+    return false;
+  }
+}
 
 function nasaPowerMetric(
   baseMetric: MetricConfig,
@@ -129,6 +139,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 }) => {
   const { defaultFarm } = useApp();
   const [activeNav, setActiveNav] = useState('Dashboard');
+  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(() => !hasSeenWalkthrough());
+  const [walkthroughMode, setWalkthroughMode] = useState<WalkthroughMode>('overview');
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('humidity');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [liveWeather, setLiveWeather] = useState<LiveWeatherData | null>(null);
@@ -181,6 +193,28 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     setNasaPowerData(null);
     setNasaPowerRefreshKey((key) => key + 1);
   }, []);
+
+  const openWalkthrough = () => {
+    setWalkthroughMode('overview');
+    setIsMobileDrawerOpen(false);
+    setIsWalkthroughOpen(true);
+  };
+
+  const closeWalkthrough = () => {
+    setIsWalkthroughOpen(false);
+    setWalkthroughMode('overview');
+    setIsMobileDrawerOpen(false);
+    try {
+      localStorage.setItem(WALKTHROUGH_SEEN_KEY, 'true');
+    } catch (error) {
+      console.error('Could not save the walkthrough preference:', error);
+    }
+  };
+
+  const changeWalkthroughMode = (mode: WalkthroughMode) => {
+    setWalkthroughMode(mode);
+    setIsMobileDrawerOpen(mode === 'guided');
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -258,6 +292,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             onNavigateProfile={() => setActiveNav('Profile')}
             onToggleMobileDrawer={() => setIsMobileDrawerOpen((prev) => !prev)}
             isMobileDrawerOpen={isMobileDrawerOpen}
+            onOpenWalkthrough={openWalkthrough}
           />
         </div>
       </header>
@@ -271,8 +306,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           >
             {activeNav === 'Map'
               ? 'Field Map & Vulnerability Analyzer'
-              : activeNav === 'Predictive Analytics'
-                ? 'Predictive Analytics'
                 : activeNav === 'Crop Rotation Planner'
                   ? 'Crop Rotation Planner'
                 : activeNav === 'Profile'
@@ -348,6 +381,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               onSelectNav={setActiveNav}
               isDarkMode={isDarkMode}
               onToggleTheme={onToggleTheme}
+              walkthroughNavItem={isWalkthroughOpen && walkthroughMode === 'guided' ? activeNav : null}
             />
           </div>
 
@@ -376,6 +410,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 isDarkMode={isDarkMode}
                 onCloseMobileDrawer={() => setIsMobileDrawerOpen(false)}
                 onToggleTheme={onToggleTheme}
+                walkthroughNavItem={isWalkthroughOpen && walkthroughMode === 'guided' ? activeNav : null}
               />
             </div>
           </div>
@@ -383,8 +418,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <div className="flex-1 min-w-0 flex flex-col gap-5">
             {activeNav === 'Map' ? (
               <MapPage isDarkMode={isDarkMode} embedded />
-            ) : activeNav === 'Predictive Analytics' ? (
-              <PredictiveAnalytics isDarkMode={isDarkMode} />
             ) : activeNav === 'Crop Rotation Planner' ? (
               <CropPlannerPage isDarkMode={isDarkMode} />
             ) : activeNav === 'Profile' ? (
@@ -427,6 +460,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </div>
         </div>
       </main>
+      {isWalkthroughOpen && (
+        <Walkthrough
+          isDarkMode={isDarkMode}
+          onClose={closeWalkthrough}
+          onNavigate={setActiveNav}
+          onModeChange={changeWalkthroughMode}
+        />
+      )}
     </div>
   );
 };

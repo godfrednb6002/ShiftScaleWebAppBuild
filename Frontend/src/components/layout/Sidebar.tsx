@@ -11,6 +11,7 @@ interface SidebarProps {
   isDarkMode: boolean;
   onCloseMobileDrawer?: () => void;
   onToggleTheme?: () => void;
+  walkthroughNavItem?: string | null;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -20,6 +21,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isDarkMode,
   onCloseMobileDrawer,
   onToggleTheme,
+  walkthroughNavItem,
 }) => {
   return (
     <aside
@@ -79,13 +81,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeNav === item.name;
+            const isWalkthroughStep = walkthroughNavItem === item.name;
             return (
               <button
                 key={item.name}
+                type="button"
+                data-walkthrough-section={item.name}
                 onClick={() => {
                   onSelectNav(item.name);
                   if (onCloseMobileDrawer) onCloseMobileDrawer();
                 }}
+                aria-current={isActive ? 'page' : undefined}
                 className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-[15px] sm:text-base font-semibold transition-all duration-150 cursor-pointer ${
                       isActive
                         ? isDarkMode
@@ -94,6 +100,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         : isDarkMode
                           ? 'text-slate-400 hover:bg-slate-800/40 hover:text-white'
                           : 'text-[#2a452f] hover:bg-white/30 hover:text-black'
+                    } ${
+                      isWalkthroughStep
+                        ? isDarkMode
+                          ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-[#08120b]'
+                          : 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-[#d7e6d9]'
+                        : ''
                     }`}
                   >
                     <Icon
