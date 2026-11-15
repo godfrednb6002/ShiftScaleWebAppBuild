@@ -19,7 +19,11 @@ export type AgriculturalInterest =
 export interface UserProfile {
   id: string;
   fullName: string;
+<<<<<<< HEAD
+  designation: string; // e.g. "Lead Agronomist & Smallholder Farmer"
+=======
   designation: string;
+>>>>>>> 79b05cedc8b900cc6eebdea0df3edc353982e44c
   email: string;
   phoneNumber: string;
   country: string;
@@ -29,13 +33,23 @@ export interface UserProfile {
   avatarUrl?: string;
   bio?: string;
   isVerified: boolean;
+<<<<<<< HEAD
+  
+  // Farmer Specific Profile
+=======
 
+>>>>>>> 79b05cedc8b900cc6eebdea0df3edc353982e44c
   farmerType: FarmerType;
   yearsExperience: number;
   mainCrops: string[];
   farmingSystem: FarmingSystemOption;
   agriculturalInterests: AgriculturalInterest[];
+<<<<<<< HEAD
+  
+  // Account Information
+=======
 
+>>>>>>> 79b05cedc8b900cc6eebdea0df3edc353982e44c
   accountCreatedAt: string;
   accountStatus: 'Active' | 'Pending Verification' | 'Suspended';
   emailVerified: boolean;

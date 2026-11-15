@@ -16,7 +16,10 @@ import type { LiveWeatherData } from '../lib/weatherService';
 import { useApp } from '../context/useApp';
 import { MapPage } from './MapPage';
 import { ProfilePage } from './ProfilePage';
+<<<<<<< HEAD
+=======
 import { SettingsPage } from './SettingsPage';
+>>>>>>> 79b05cedc8b900cc6eebdea0df3edc353982e44c
 
 interface DashboardPageProps {
   isDarkMode: boolean;
@@ -123,6 +126,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         <div className="w-full max-w-[1580px] mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <Header
             isDarkMode={isDarkMode}
+            onNavigateProfile={() => setActiveNav('Profile')}
             onToggleMobileDrawer={() => setIsMobileDrawerOpen((prev) => !prev)}
             isMobileDrawerOpen={isMobileDrawerOpen}
           />
@@ -140,6 +144,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               ? 'Field Map & Vulnerability Analyzer'
               : activeNav === 'Predictive Analytics'
                 ? 'Predictive Analytics'
+                : activeNav === 'Profile'
+                  ? 'Profile'
                 : 'Today On ShiftScale'}
           </h2>
 
@@ -276,6 +282,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <ProfilePage
                 isDarkMode={isDarkMode}
                 onSelectNav={setActiveNav}
+<<<<<<< HEAD
+                onOpenFarmOnMap={() => setActiveNav('Map')}
+=======
                 onOpenFarmOnMap={(_farmId) => setActiveNav('Map')}
               />
             ) : activeNav === 'Settings' ? (
@@ -283,6 +292,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 isDarkMode={isDarkMode}
                 onNavigateToMap={() => setActiveNav('Map')}
                 onToggleTheme={onToggleTheme}
+>>>>>>> 79b05cedc8b900cc6eebdea0df3edc353982e44c
               />
             ) : (
               <div className="flex flex-col lg:flex-row gap-5 items-stretch">
