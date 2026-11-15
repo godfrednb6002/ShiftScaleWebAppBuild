@@ -32,7 +32,7 @@ function statusBadge(status: LocationState['status'], isDarkMode: boolean): {
       };
     case 'denied':
       return {
-        label: 'Permission denied',
+        label: 'Location access not granted',
         color: isDarkMode
           ? 'text-amber-300 bg-amber-500/20 border-amber-500/30'
           : 'text-amber-800 bg-amber-50 border-amber-200',
@@ -72,7 +72,7 @@ function statusBadge(status: LocationState['status'], isDarkMode: boolean): {
       };
     default:
       return {
-        label: 'Click arrow to find location',
+        label: 'Location not set',
         color: isDarkMode
           ? 'text-slate-400 bg-slate-800/40 border-slate-700/50'
           : 'text-[#34533a]/70 bg-[#34533a]/10 border-[#34533a]/30',
@@ -122,14 +122,14 @@ export const LocateButton: React.FC<LocateButtonProps> = ({
                 ? 'border-emerald-500/40 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 hover:scale-105 active:scale-95'
                 : 'border-emerald-300 bg-emerald-600 text-white hover:bg-emerald-700 hover:scale-105 active:scale-95'
           }`}
-          title="Auto-detect my live location in Ghana"
+          title="Use My Location"
         >
           {isLocating ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : (
             <Navigation className="w-3.5 h-3.5 fill-current -rotate-45" />
           )}
-          <span>{isLocating ? 'Locating…' : 'Locate Me'}</span>
+          <span>{isLocating ? 'Locating…' : 'Use My Location'}</span>
         </button>
         {location.userLocation && (
           <button

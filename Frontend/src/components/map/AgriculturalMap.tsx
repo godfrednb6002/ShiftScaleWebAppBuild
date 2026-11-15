@@ -8,6 +8,7 @@ import {
   Popup,
   Polygon,
   Polyline,
+  Circle,
   useMapEvents,
   useMap,
 } from 'react-leaflet';
@@ -112,7 +113,6 @@ interface AgriculturalMapProps {
   location: LocationState;
   selected?: FarmLocation | null;
   onLocationSelect?: (location: FarmLocation) => void;
-  onCoordsChange?: (lat: number, lng: number) => void;
   className?: string;
   selectedFarm: Farm | null;
   checkpoints: Checkpoint[];
@@ -219,13 +219,6 @@ const MapClickListener: React.FC<{
   return null;
 };
 
-const MapMoveListener: React.FC<{
-  onMove: (event: L.LeafletEvent) => void;
-}> = ({ onMove }) => {
-  useMapEvents({ moveend: onMove });
-  return null;
-};
-
 /** Imperatively manages NASA GIBS overlay tile layers. */
 const NasaOverlayLayers: React.FC<{
   activeLayers: ActiveLayer[];
@@ -325,7 +318,6 @@ export const AgriculturalMap: React.FC<AgriculturalMapProps> = ({
   location,
   selected,
   onLocationSelect,
-  onCoordsChange,
   className,
   selectedFarm,
   checkpoints,
@@ -378,17 +370,6 @@ export const AgriculturalMap: React.FC<AgriculturalMapProps> = ({
 
   const handleTileRetry = useCallback(() => setTileError(false), []);
 
-  const onMove = useCallback(
-    (event: L.LeafletEvent) => {
-      const map = event.target as L.Map;
-      const c = map.getCenter();
-      if (onCoordsChange) {
-        onCoordsChange(c.lat, c.lng);
-      }
-    },
-    [onCoordsChange]
-  );
-
   const finishDrawing = useCallback(() => {
     if (drawingVertices.length < 3) {
       onCancelDrawing();
@@ -413,9 +394,6 @@ export const AgriculturalMap: React.FC<AgriculturalMapProps> = ({
       finishDrawing();
     }
   }, [drawingVertices.length, finishDrawing]);
-
-  // Single unified active location (never show duplicate markers)
-  const activeLocation = selected ?? location.userLocation;
 
   return (
     <div className={`relative w-full h-full min-h-[480px] ${className ?? ''}`}>
@@ -447,29 +425,69 @@ export const AgriculturalMap: React.FC<AgriculturalMapProps> = ({
           onStatusChange={onLayerStatusChange}
         />
         <MapClickListener onMapClick={handleMapClick} />
-        <MapMoveListener onMove={onMove} />
 
-        {/* Single unified location marker with radar pulse */}
-        {activeLocation && !selectedFarm && (
-          <Marker
-            position={[activeLocation.lat, activeLocation.lng]}
-            icon={standingLocationArrowIcon}
-            zIndexOffset={1000}
-          >
-            <Popup>
-              <div className={`font-bold ${isDarkMode ? 'text-emerald-400' : 'text-[#064e3b]'}`}>
-                {location.source === 'gps' ? 'Your Current Location' : 'Selected Location'}
-              </div>
-              <div className={`text-xs mt-1 ${isDarkMode ? 'text-slate-300' : 'text-[#34533a]/80'}`}>
-                {activeLocation.lat.toFixed(4)}° N,{' '}
-                {Math.abs(activeLocation.lng).toFixed(4)}°{' '}
-                {activeLocation.lng >= 0 ? 'E' : 'W'}
-                {location.gpsAccuracyMeters != null && location.source === 'gps' &&
-                  ` • ±${Math.round(location.gpsAccuracyMeters)} m`}
-              </div>
-            </Popup>
-          </Marker>
+        {/* User Current Location Marker (with GPS accuracy aura and standing beacon) */}
+        {location.userLocation && (
+          <>
+            {location.gpsAccuracyMeters != null && location.gpsAccuracyMeters > 0 && (
+              <Circle
+                center={[location.userLocation.lat, location.userLocation.lng]}
+                radius={Math.min(location.gpsAccuracyMeters, 2500)}
+                pathOptions={{
+                  color: '#10b981',
+                  fillColor: '#10b981',
+                  fillOpacity: 0.12,
+                  weight: 1.5,
+                  dashArray: '4 4',
+                }}
+              />
+            )}
+            <Marker
+              position={[location.userLocation.lat, location.userLocation.lng]}
+              icon={standingLocationArrowIcon}
+              zIndexOffset={1000}
+            >
+              <Popup>
+                <div className={`font-bold ${isDarkMode ? 'text-emerald-400' : 'text-[#064e3b]'}`}>
+                  Your Current Location
+                </div>
+                <div className={`text-xs mt-1 ${isDarkMode ? 'text-slate-300' : 'text-[#34533a]/80'}`}>
+                  {location.userLocation.lat.toFixed(4)}° N,{' '}
+                  {Math.abs(location.userLocation.lng).toFixed(4)}°{' '}
+                  {location.userLocation.lng >= 0 ? 'E' : 'W'}
+                  {location.gpsAccuracyMeters != null &&
+                    ` • ±${Math.round(location.gpsAccuracyMeters)} m`}
+                </div>
+                <div className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 font-semibold flex items-center gap-1">
+                  <span>✓</span> GPS Verified
+                </div>
+              </Popup>
+            </Marker>
+          </>
         )}
+
+        {/* Selected Map Location (when tapping a location manually that is not the user's GPS) */}
+        {selected &&
+          (!location.userLocation ||
+            Math.abs(selected.lat - location.userLocation.lat) > 0.0001 ||
+            Math.abs(selected.lng - location.userLocation.lng) > 0.0001) &&
+          !selectedFarm && (
+            <Marker
+              position={[selected.lat, selected.lng]}
+              icon={standingLocationArrowIcon}
+              zIndexOffset={900}
+            >
+              <Popup>
+                <div className={`font-bold ${isDarkMode ? 'text-emerald-400' : 'text-[#064e3b]'}`}>
+                  Selected Location
+                </div>
+                <div className={`text-xs mt-1 ${isDarkMode ? 'text-slate-300' : 'text-[#34533a]/80'}`}>
+                  {selected.lat.toFixed(4)}° N, {Math.abs(selected.lng).toFixed(4)}°{' '}
+                  {selected.lng >= 0 ? 'E' : 'W'}
+                </div>
+              </Popup>
+            </Marker>
+          )}
 
         {/* Selected Farm Boundary and Centre Marker */}
         {selectedFarm && (
@@ -646,24 +664,28 @@ export const AgriculturalMap: React.FC<AgriculturalMapProps> = ({
         </div>
       )}
 
-      {/* Standing Floating Location Arrow FAB on the Map */}
+      {/* Floating "Use My Location" Button on the Map */}
       {onLocateMe && (
         <button
           type="button"
           onClick={onLocateMe}
           disabled={isLocating}
-          className={`absolute bottom-6 right-5 z-30 flex items-center justify-center w-12 h-12 rounded-2xl border shadow-2xl backdrop-blur-xl transition-all cursor-pointer group hover:scale-105 active:scale-95 ${
+          className={`absolute bottom-6 right-5 z-30 flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border shadow-2xl backdrop-blur-xl transition-all cursor-pointer group hover:scale-105 active:scale-95 ${
             isDarkMode
-              ? 'border-emerald-500/40 bg-slate-900/90 text-emerald-400 hover:bg-slate-800'
+              ? 'border-emerald-500/40 bg-slate-900/95 text-emerald-400 hover:bg-slate-800'
               : 'border-emerald-500/40 bg-white/95 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800'
           }`}
-          title="Auto-zoom directly to my location in Ghana"
+          title="Use My Location"
+          aria-label="Use My Location"
         >
           {isLocating ? (
-            <Loader2 className="w-5 h-5 animate-spin text-emerald-500" />
+            <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
           ) : (
-            <Navigation className="w-5 h-5 fill-current -rotate-45 text-emerald-500 group-hover:text-emerald-400 transition-colors" />
+            <Navigation className="w-4 h-4 fill-current -rotate-45 text-emerald-500 group-hover:text-emerald-400 transition-colors" />
           )}
+          <span className="text-xs font-bold">
+            {isLocating ? 'Locating…' : 'Use My Location'}
+          </span>
         </button>
       )}
     </div>
