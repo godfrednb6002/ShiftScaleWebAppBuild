@@ -15,6 +15,8 @@ import { fetchLiveWeather } from '../lib/weatherService';
 import type { LiveWeatherData } from '../lib/weatherService';
 import { useApp } from '../context/useApp';
 import { MapPage } from './MapPage';
+import { ProfilePage } from './ProfilePage';
+import { SettingsPage } from './SettingsPage';
 
 interface DashboardPageProps {
   isDarkMode: boolean;
@@ -159,43 +161,69 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   : isDarkMode
                     ? 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 border border-emerald-500/30'
                     : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300'
-              }`}
-              title="Stream live weather telemetry from Open-Meteo"
-            >
-              <Radio className="w-3 h-3" />
-              <span>Live Feed</span>
-            </button>
+              ? 'Interactive Field & Satellite Map'
+              : activeNav === 'Profile'
+                ? 'Farmer Profile & Portfolio'
+                : activeNav === 'Settings'
+                  ? 'Settings'
+                  : 'Today On ShiftScale'}
+          </h2>
 
-            <div className="flex items-center gap-1 px-2 text-[11px] font-bold text-emerald-800 dark:text-emerald-300 shrink-0">
-              <CloudSun className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Simulate:</span>
+          {activeNav === 'Dashboard' && (
+            <div
+              className={`flex items-center gap-1.5 p-1.5 rounded-2xl backdrop-blur-xl border shadow-sm overflow-x-auto no-scrollbar max-w-full transition-all ${
+                isDarkMode ? 'bg-black/40 border-white/10' : 'bg-white/50 border-white/70'
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLiveActive(true);
+                  if (liveWeather) onSelectWeather(liveWeather.condition);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  isLiveActive
+                    ? 'bg-emerald-500 text-white shadow-xs animate-pulse ring-2 ring-emerald-400/60'
+                    : isDarkMode
+                      ? 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 border border-emerald-500/30'
+                      : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300'
+                }`}
+                title="Stream live weather telemetry from Open-Meteo"
+              >
+                <Radio className="w-3 h-3" />
+                <span>Live Feed</span>
+              </button>
+
+              <div className="flex items-center gap-1 px-2 text-[11px] font-bold text-emerald-800 dark:text-emerald-300 shrink-0">
+                <CloudSun className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Simulate:</span>
+              </div>
+              {weatherOptions.map((weather) => {
+                const isSelected = !isLiveActive && currentWeather === weather;
+                const profile = WEATHER_PROFILES[weather];
+                return (
+                  <button
+                    key={weather}
+                    type="button"
+                    onClick={() => {
+                      setIsLiveActive(false);
+                      onSelectWeather(weather);
+                    }}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-semibold capitalize whitespace-nowrap transition-all cursor-pointer ${
+                      isSelected
+                        ? isDarkMode
+                          ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 font-bold shadow-xs'
+                          : 'bg-[#102414] text-white shadow-xs font-bold'
+                        : isDarkMode
+                          ? 'text-slate-400 hover:text-white hover:bg-white/5'
+                          : 'text-[#2e4c34] hover:bg-white/40'
+                    }`}
+                  >
+                    {profile.label}
+                  </button>
+                );
+              })}
             </div>
-            {weatherOptions.map((weather) => {
-              const isSelected = !isLiveActive && currentWeather === weather;
-              const profile = WEATHER_PROFILES[weather];
-              return (
-                <button
-                  key={weather}
-                  type="button"
-                  onClick={() => {
-                    setIsLiveActive(false);
-                    onSelectWeather(weather);
-                  }}
-                  className={`px-2.5 py-1 rounded-xl text-xs font-semibold capitalize whitespace-nowrap transition-all cursor-pointer ${
-                    isSelected
-                      ? isDarkMode
-                        ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 font-bold shadow-xs'
-                        : 'bg-[#102414] text-white shadow-xs font-bold'
-                      : isDarkMode
-                        ? 'text-slate-400 hover:text-white hover:bg-white/5'
-                        : 'text-[#2e4c34] hover:bg-white/40'
-                  }`}
-                >
-                  {profile.label}
-                </button>
-              );
-            })}
-          </div>
           )}
         </div>
 
@@ -244,6 +272,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <MapPage isDarkMode={isDarkMode} embedded />
             ) : activeNav === 'Predictive Analytics' ? (
               <PredictiveAnalytics isDarkMode={isDarkMode} />
+            ) : activeNav === 'Profile' ? (
+              <ProfilePage
+                isDarkMode={isDarkMode}
+                onSelectNav={setActiveNav}
+                onOpenFarmOnMap={(_farmId) => setActiveNav('Map')}
+              />
+            ) : activeNav === 'Settings' ? (
+              <SettingsPage
+                isDarkMode={isDarkMode}
+                onNavigateToMap={() => setActiveNav('Map')}
+                onToggleTheme={onToggleTheme}
+              />
             ) : (
               <div className="flex flex-col lg:flex-row gap-5 items-stretch">
                 <div className="flex-1 flex flex-col gap-4 min-w-0">
