@@ -7,7 +7,7 @@ import { MetricButtons } from '../components/dashboard/MetricButtons';
 import { HeroForecastCard } from '../components/dashboard/HeroForecastCard';
 import { MetricBreakdownPanel } from '../components/dashboard/MetricBreakdownPanel';
 import { WEATHER_METRICS_DATA } from '../constants/metricsData';
-import { NAV_ITEMS } from '../constants/navigation';
+import { NAV_ITEMS, getNavNameFromPath, getPathFromNavName } from '../constants/navigation';
 import { WEATHER_PROFILES } from '../constants/weatherProfiles';
 import type { WeatherCondition, WeatherProfile } from '../constants/weatherProfiles';
 import type { MetricConfig, MetricType } from '../types';
@@ -138,7 +138,43 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   onSelectWeather,
 }) => {
   const { defaultFarm } = useApp();
-  const [activeNav, setActiveNav] = useState('Dashboard');
+  const [activeNav, setActiveNavState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return getNavNameFromPath(window.location.pathname);
+    }
+    return 'Dashboard';
+  });
+
+  const setActiveNav = useCallback((name: string, updateHistory = true) => {
+    setActiveNavState(name);
+    if (updateHistory && typeof window !== 'undefined') {
+      const targetPath = getPathFromNavName(name);
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({ nav: name }, '', targetPath);
+      }
+    }
+  }, []);
+
+  // Listen to browser Back/Forward buttons (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      const matched = getNavNameFromPath(window.location.pathname);
+      setActiveNavState(matched);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    // If starting on root or invalid path, synchronize URL cleanly
+    const currentPath = window.location.pathname;
+    const expectedPath = getPathFromNavName(getNavNameFromPath(currentPath));
+    if (currentPath === '/' && currentPath !== expectedPath) {
+      window.history.replaceState({ nav: 'Dashboard' }, '', expectedPath);
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(() => !hasSeenWalkthrough());
   const [walkthroughMode, setWalkthroughMode] = useState<WalkthroughMode>('overview');
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('humidity');
