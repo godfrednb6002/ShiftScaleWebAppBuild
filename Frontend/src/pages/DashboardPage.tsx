@@ -16,10 +16,7 @@ import type { LiveWeatherData } from '../lib/weatherService';
 import { useApp } from '../context/useApp';
 import { MapPage } from './MapPage';
 import { ProfilePage } from './ProfilePage';
-<<<<<<< HEAD
-=======
 import { SettingsPage } from './SettingsPage';
->>>>>>> 79b05cedc8b900cc6eebdea0df3edc353982e44c
 
 interface DashboardPageProps {
   isDarkMode: boolean;
@@ -145,34 +142,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               : activeNav === 'Predictive Analytics'
                 ? 'Predictive Analytics'
                 : activeNav === 'Profile'
-                  ? 'Profile'
-                : 'Today On ShiftScale'}
-          </h2>
-
-          {activeNav === 'Dashboard' && (
-          <div
-            className={`flex items-center gap-1.5 p-1.5 rounded-2xl backdrop-blur-xl border shadow-sm overflow-x-auto no-scrollbar max-w-full transition-all ${
-              isDarkMode ? 'bg-black/40 border-white/10' : 'bg-white/50 border-white/70'
-            }`}
-          >
-            <button
-              type="button"
-              onClick={() => {
-                setIsLiveActive(true);
-                if (liveWeather) onSelectWeather(liveWeather.condition);
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                isLiveActive
-                  ? 'bg-emerald-500 text-white shadow-xs animate-pulse ring-2 ring-emerald-400/60'
-                  : isDarkMode
-                    ? 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 border border-emerald-500/30'
-                    : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300'
-              ? 'Interactive Field & Satellite Map'
-              : activeNav === 'Profile'
-                ? 'Farmer Profile & Portfolio'
-                : activeNav === 'Settings'
-                  ? 'Settings'
-                  : 'Today On ShiftScale'}
+                  ? 'Farmer Profile & Portfolio'
+                  : activeNav === 'Settings'
+                    ? 'Settings'
+                    : 'Today On ShiftScale'}
           </h2>
 
           {activeNav === 'Dashboard' && (
@@ -282,9 +255,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <ProfilePage
                 isDarkMode={isDarkMode}
                 onSelectNav={setActiveNav}
-<<<<<<< HEAD
-                onOpenFarmOnMap={() => setActiveNav('Map')}
-=======
                 onOpenFarmOnMap={(_farmId) => setActiveNav('Map')}
               />
             ) : activeNav === 'Settings' ? (
@@ -292,7 +262,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 isDarkMode={isDarkMode}
                 onNavigateToMap={() => setActiveNav('Map')}
                 onToggleTheme={onToggleTheme}
->>>>>>> 79b05cedc8b900cc6eebdea0df3edc353982e44c
               />
             ) : (
               <div className="flex flex-col lg:flex-row gap-5 items-stretch">
