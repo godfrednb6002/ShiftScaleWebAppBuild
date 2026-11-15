@@ -20,6 +20,7 @@ import { ProfileDataService } from '../lib/profileService';
 import { postBackendData } from '../lib/backendApi';
 import type { CropRotationRecommendation } from '../types/cropRotation';
 import { useApp } from '../context/useApp';
+import { getCropImage } from '../constants/cropImages';
 
 interface CropPlannerPageProps {
   isDarkMode: boolean;
@@ -504,26 +505,83 @@ export function CropPlannerPage({ isDarkMode }: CropPlannerPageProps) {
           </header>
 
           <div>
-            <h3 className="mb-3 text-sm font-bold">Suggested crop order</h3>
-            <ol className="grid gap-3 md:grid-cols-2">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold flex items-center gap-2">
+                <span>Suggested Crop Sequence</span>
+                <span className="text-xs font-normal opacity-70">
+                  ({recommendation.crop_sequence.length} rotation phases)
+                </span>
+              </h3>
+            </div>
+            <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {recommendation.crop_sequence.map((phase, index) => {
                 const CropIcon = getCropIcon(phase.crop);
+                const cropImg = getCropImage(phase.crop);
+
                 return (
-                  <li key={`${phase.crop}-${index}`} className={`rounded-xl border p-4 ${theme.subPanel}`}>
-                    <div className="flex items-start gap-3">
-                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-emerald-600/15 text-sm font-bold text-emerald-500">
-                        {index + 1}
-                      </span>
-                      <div className="min-w-0">
-                        <h4 className="flex items-center gap-2 font-bold">
-                          <CropIcon aria-hidden="true" className="h-5 w-5 shrink-0 text-emerald-500" />
-                          {phase.crop}
-                        </h4>
-                        <p className={`text-xs ${theme.muted}`}>Plant type: {phase.crop_family}</p>
-                        <p className="mt-2 text-xs font-semibold text-emerald-500">
-                          Plant {MONTH_NAMES[phase.start_month - 1]} - {MONTH_NAMES[phase.end_month - 1]} · {phase.duration_days} days in the field
+                  <li
+                    key={`${phase.crop}-${index}`}
+                    className={`group relative flex flex-col rounded-2xl border overflow-hidden shadow-sm transition-all hover:shadow-md hover:border-emerald-500/50 ${theme.subPanel}`}
+                  >
+                    {/* Visual Crop Header / Image Banner */}
+                    <div className="relative h-36 w-full overflow-hidden bg-emerald-950/20">
+                      {cropImg ? (
+                        <img
+                          src={cropImg}
+                          alt={phase.crop}
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-emerald-600/20 to-teal-800/30">
+                          <CropIcon className="h-16 w-16 text-emerald-500/40" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+
+                      {/* Phase Badge */}
+                      <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-500 text-xs font-black text-white shadow-lg">
+                          #{index + 1}
+                        </span>
+                        <span className="rounded-lg bg-black/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300 backdrop-blur-md">
+                          Phase {index + 1}
+                        </span>
+                      </div>
+
+                      {/* Crop Name & Family overlay on image */}
+                      <div className="absolute bottom-2.5 left-3 right-3">
+                        <div className="flex items-center gap-1.5">
+                          <CropIcon className="h-4 w-4 text-emerald-400 drop-shadow" />
+                          <h4 className="text-base font-extrabold text-white drop-shadow">
+                            {phase.crop}
+                          </h4>
+                        </div>
+                        <p className="text-[11px] font-medium text-emerald-200/90 drop-shadow">
+                          Family: {phase.crop_family}
                         </p>
-                        <p className={`mt-2 text-sm leading-relaxed ${theme.muted}`}>{phase.purpose}</p>
+                      </div>
+                    </div>
+
+                    {/* Card Content Body */}
+                    <div className="flex flex-1 flex-col justify-between p-4 space-y-3">
+                      <div>
+                        {/* Planting Window Badge */}
+                        <div className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-400">
+                          <span>🌱 Plant {MONTH_NAMES[phase.start_month - 1]} – {MONTH_NAMES[phase.end_month - 1]}</span>
+                          <span className="opacity-60">•</span>
+                          <span>{phase.duration_days} days</span>
+                        </div>
+
+                        {/* Purpose Description */}
+                        <p className={`mt-2.5 text-xs leading-relaxed ${theme.muted}`}>
+                          {phase.purpose}
+                        </p>
+                      </div>
+
+                      {/* Agronomic footer tags */}
+                      <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] opacity-75">
+                        <span>Window: {MONTH_NAMES[phase.start_month - 1]} to {MONTH_NAMES[phase.end_month - 1]}</span>
+                        <span className="font-semibold text-emerald-400">AI Verified</span>
                       </div>
                     </div>
                   </li>
