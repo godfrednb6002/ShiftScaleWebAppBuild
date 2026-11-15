@@ -45,7 +45,7 @@ class CropRotationRecommendation(BaseModel):
 
     title: str = Field(min_length=1, max_length=120)
     summary: str = Field(min_length=1, max_length=600)
-    crop_sequence: list[CropRotationPhase] = Field(min_length=2, max_length=5)
+    crop_sequence: list[CropRotationPhase] = Field(min_length=2, max_length=12)
     rationale: str = Field(min_length=1, max_length=1_000)
     considerations: list[str] = Field(min_length=1, max_length=6)
     local_checks: list[str] = Field(min_length=1, max_length=6)
