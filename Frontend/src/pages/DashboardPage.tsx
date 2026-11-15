@@ -17,6 +17,7 @@ import { useApp } from '../context/useApp';
 import { MapPage } from './MapPage';
 import { ProfilePage } from './ProfilePage';
 import { SettingsPage } from './SettingsPage';
+import { CropPlannerPage } from './CropPlannerPage';
 
 interface DashboardPageProps {
   isDarkMode: boolean;
@@ -141,6 +142,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               ? 'Field Map & Vulnerability Analyzer'
               : activeNav === 'Predictive Analytics'
                 ? 'Predictive Analytics'
+                : activeNav === 'Crop Rotation Planner'
+                  ? 'Crop Rotation Planner'
                 : activeNav === 'Profile'
                   ? 'Farmer Profile & Portfolio'
                   : activeNav === 'Settings'
@@ -251,6 +254,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <MapPage isDarkMode={isDarkMode} embedded />
             ) : activeNav === 'Predictive Analytics' ? (
               <PredictiveAnalytics isDarkMode={isDarkMode} />
+            ) : activeNav === 'Crop Rotation Planner' ? (
+              <CropPlannerPage isDarkMode={isDarkMode} />
             ) : activeNav === 'Profile' ? (
               <ProfilePage
                 isDarkMode={isDarkMode}
