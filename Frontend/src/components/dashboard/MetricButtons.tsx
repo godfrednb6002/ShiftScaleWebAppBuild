@@ -55,6 +55,9 @@ export const MetricButtons: React.FC<MetricButtonsProps> = ({
                 <p className="text-lg sm:text-2xl lg:text-3xl font-extrabold tracking-tight mt-0.5 sm:mt-1.5 leading-none">
                   {item.currentValue}
                 </p>
+                <p className="mt-1 truncate text-[9px] font-medium leading-tight text-emerald-200/80 sm:text-[10px]">
+                  {item.subValue}
+                </p>
               </div>
             </div>
             {isSelected && (

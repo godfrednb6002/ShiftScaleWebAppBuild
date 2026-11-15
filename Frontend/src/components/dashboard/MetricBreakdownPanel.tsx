@@ -55,7 +55,7 @@ export const MetricBreakdownPanel: React.FC<MetricBreakdownPanelProps> = ({
             </span>
           </div>
 
-          {/* Farmer AI Text Summariser */}
+          {/* NASA POWER observation summary */}
           <div
             className={`mb-3.5 p-3.5 rounded-2xl border shadow-xs text-left transition-colors ${isDarkMode
                 ? 'bg-slate-800/60 border-slate-700/80 text-slate-200'
@@ -87,7 +87,7 @@ export const MetricBreakdownPanel: React.FC<MetricBreakdownPanelProps> = ({
                 className={`font-bold shrink-0 ${isDarkMode ? 'text-emerald-300' : 'text-emerald-900'
                   }`}
               >
-                Tip for Farmer:
+                Data note:
               </span>
               <span>{currentMetric.cropImpactSummary.actionAdvice}</span>
             </div>

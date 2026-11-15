@@ -19,6 +19,15 @@ npm run build
 npm run lint
 ```
 
+The original dashboard weather interface, including its live feed and condition
+simulator, is retained. Relative humidity, precipitation, and wind cards use
+NASA POWER daily data for the current farm. The dashboard automatically
+requests the latest eight calendar days, including today, on load; because
+NASA POWER can report a delay, cards use the latest available observation and
+show its date. The weather image card has a refresh button whose label
+collapses to an icon briefly when clicked. Wind speeds are converted from m/s
+to km/h for display.
+
 The dashboard includes a predictive-analytics scenario simulator with
 hypothetical rainfall and temperature controls, summary indicators, water
 balance and rotation comparison visualizations. These are prototype examples,

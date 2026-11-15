@@ -95,7 +95,6 @@ function AppContent() {
         isDarkMode ? 'bg-[#08120b] text-[#e2f0e4]' : 'bg-[#d7e6d9] text-[#112314]'
       }`}
     >
-      {/* Dynamic Background synced with selected weather */}
       <Background isDarkMode={isDarkMode} bgImage={activeWeatherProfile.image} />
 
       {/* Main Dashboard directly active (Auth Page commented out) */}
