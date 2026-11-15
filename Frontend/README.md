@@ -25,3 +25,7 @@ balance and rotation comparison visualizations. These are prototype examples,
 not calibrated forecasts or agronomic recommendations; historical trend values
 are explicitly illustrative rather than measured NASA data. Local `.env` files
 are not included.
+
+The Profile page is available from the drawer or header profile menu. Profile
+and example farm data are stored only in browser local storage; authentication,
+password changes, and sign-out are not connected.
