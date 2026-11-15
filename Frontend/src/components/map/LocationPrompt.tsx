@@ -66,7 +66,7 @@ export const LocationPrompt: React.FC<LocationPromptProps> = ({
           <div className="pr-4">
             <div className="flex items-center gap-1.5 mb-1.5">
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
-                AGROINTEL GH
+                ShiftScale
               </span>
             </div>
             <h3
@@ -74,7 +74,7 @@ export const LocationPrompt: React.FC<LocationPromptProps> = ({
                 isDarkMode ? 'text-white' : 'text-[#112314]'
               }`}
             >
-              Allow AGROINTEL GH to access your location?
+              Allow ShiftScale to access your location?
             </h3>
             <p
               className={`text-xs sm:text-sm mt-2 leading-relaxed ${
