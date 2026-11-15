@@ -1,20 +1,13 @@
 import { useMemo, useState } from 'react';
 import {
-  Apple,
-  Bean,
-  Carrot,
   ChevronDown,
-  Leaf,
   MapPin,
   ShieldAlert,
   Sparkles,
   Cpu,
   Loader2,
   Plus,
-  Sprout,
   X,
-  Wheat,
-  type LucideIcon,
 } from 'lucide-react';
 import { ProfileDataService } from '../lib/profileService';
 import { postBackendData } from '../lib/backendApi';
@@ -50,16 +43,6 @@ const FARMING_SYSTEM_OPTIONS = [
   'Agroforestry System',
   'Conservation Agriculture',
 ];
-
-function getCropIcon(cropName: string): LucideIcon {
-  const crop = cropName.toLowerCase();
-  if (/\b(cassava|sweet potato|yam|potato|taro|carrot)\b/.test(crop)) return Carrot;
-  if (/\b(cowpea|soybean|soy|groundnut|peanut|pigeon pea|bean|pea|lentil)\b/.test(crop)) return Bean;
-  if (/\b(plantain|banana|apple|fruit)\b/.test(crop)) return Apple;
-  if (/\b(maize|corn|sorghum|millet|rice|wheat|rye|oat|barley)\b/.test(crop)) return Wheat;
-  if (/\b(cover crop|clover|grass)\b/.test(crop)) return Sprout;
-  return Leaf;
-}
 
 export function CropPlannerPage({ isDarkMode }: CropPlannerPageProps) {
   const { farms, defaultFarmId } = useApp();
@@ -291,7 +274,6 @@ export function CropPlannerPage({ isDarkMode }: CropPlannerPageProps) {
             
             <div className="flex flex-wrap items-center gap-2">
               {selectedCrops.map((crop) => {
-                const CropIcon = getCropIcon(crop);
                 return (
                   <div
                     key={crop}
@@ -301,7 +283,6 @@ export function CropPlannerPage({ isDarkMode }: CropPlannerPageProps) {
                         : 'bg-[#102414] text-white'
                     }`}
                   >
-                    <CropIcon aria-hidden="true" className="w-4 h-4 text-emerald-400 shrink-0" />
                     <span>{crop}</span>
                     <button
                       type="button"
@@ -360,7 +341,6 @@ export function CropPlannerPage({ isDarkMode }: CropPlannerPageProps) {
                   <p className={`text-[11px] mb-1.5 ${theme.subtle}`}>Quick select from library:</p>
                   <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
                     {POPULAR_CROPS.filter((c) => !selectedCrops.includes(c)).map((crop) => {
-                      const CropIcon = getCropIcon(crop);
                       return (
                         <button
                           key={crop}
@@ -372,7 +352,6 @@ export function CropPlannerPage({ isDarkMode }: CropPlannerPageProps) {
                               : 'bg-emerald-50 hover:bg-emerald-100 text-[#1b3d22] border border-emerald-200/60'
                           }`}
                         >
-                          <CropIcon aria-hidden="true" className="w-3.5 h-3.5 text-emerald-500" />
                           <Plus className="w-3 h-3 opacity-60" />
                           <span>{crop}</span>
                         </button>
@@ -515,7 +494,6 @@ export function CropPlannerPage({ isDarkMode }: CropPlannerPageProps) {
             </div>
             <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {recommendation.crop_sequence.map((phase, index) => {
-                const CropIcon = getCropIcon(phase.crop);
                 const cropImg = getCropImage(phase.crop);
 
                 return (
@@ -533,7 +511,9 @@ export function CropPlannerPage({ isDarkMode }: CropPlannerPageProps) {
                         />
                       ) : (
                         <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-emerald-600/20 to-teal-800/30">
-                          <CropIcon className="h-16 w-16 text-emerald-500/40" />
+                          <span className="text-3xl font-extrabold text-emerald-400/50 uppercase tracking-widest">
+                            {phase.crop}
+                          </span>
                         </div>
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
@@ -550,12 +530,9 @@ export function CropPlannerPage({ isDarkMode }: CropPlannerPageProps) {
 
                       {/* Crop Name & Family overlay on image */}
                       <div className="absolute bottom-2.5 left-3 right-3">
-                        <div className="flex items-center gap-1.5">
-                          <CropIcon className="h-4 w-4 text-emerald-400 drop-shadow" />
-                          <h4 className="text-base font-extrabold text-white drop-shadow">
-                            {phase.crop}
-                          </h4>
-                        </div>
+                        <h4 className="text-base font-extrabold text-white drop-shadow">
+                          {phase.crop}
+                        </h4>
                         <p className="text-[11px] font-medium text-emerald-200/90 drop-shadow">
                           Family: {phase.crop_family}
                         </p>
