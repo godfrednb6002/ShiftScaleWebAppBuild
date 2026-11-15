@@ -61,6 +61,28 @@ The predictive analytics page uses this endpoint to display measured climate
 history; its scenario indices, crop-water demand, and yield comparisons remain
 illustrative.
 
+## Gemini crop-rotation recommendation
+
+`POST /api/v1/crop-rotation/recommendation` asks Gemini to draft one crop
+sequence from the selected crops, soil type, farming system, farm region, and
+area. The response includes crop phases, month windows, rationale, and local
+checks written in simple, everyday language. It does not claim satellite
+evidence or quantified yield and water benefits. The selected farm name and
+coordinates are not sent to Google.
+
+Create a Gemini API key in Google AI Studio and place it only in the ignored
+`Backend/.env` file:
+
+```text
+GEMINI_API_KEY=your-google-ai-studio-api-key
+GEMINI_MODEL=gemini-3.5-flash-lite
+```
+
+Restart the backend after changing the environment. The API key must never be
+added to the frontend or committed. This endpoint currently has no user
+authentication or quota enforcement; keep it on a trusted development
+environment until those protections are added before public deployment.
+
 ## NASA GPM IMERG V07 downloader
 
 The original `download_files_GPM_3IMERGDF_07.py` downloader is available under
