@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Check, Menu, X } from 'lucide-react';
+import { ChevronDown, Check, Menu, User, X } from 'lucide-react';
 import { CountryFlag } from '../common/CountryFlag';
 import { SUPPORTED_COUNTRIES } from '../../constants/countries';
 import { useApp } from '../../context/useApp';
@@ -19,9 +19,11 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { account, country, setCountry } = useApp();
   const [showCountryMenu, setShowCountryMenu] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showGreeting, setShowGreeting] = useState(true);
   const [renderGreeting, setRenderGreeting] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   const displayName = propUserName || account.userName || 'Boateng';
 
@@ -47,14 +49,17 @@ export const Header: React.FC<HeaderProps> = ({
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowCountryMenu(false);
       }
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
     };
-    if (showCountryMenu) {
+    if (showCountryMenu || showProfileMenu) {
       document.addEventListener('mousedown', handleOutsideClick);
     }
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
     };
-  }, [showCountryMenu]);
+  }, [showCountryMenu, showProfileMenu]);
 
   return (
     <div className="flex items-center justify-between px-1 gap-1.5 sm:gap-2">
@@ -79,6 +84,37 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </button>
         )}
+
+        <div className="relative shrink-0" ref={profileRef}>
+          <button
+            type="button"
+            onClick={() => setShowProfileMenu((isOpen) => !isOpen)}
+            aria-label="Open profile"
+            aria-expanded={showProfileMenu}
+            title="Profile"
+            className={`flex h-9 w-9 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl border shadow-sm transition-all duration-200 cursor-pointer shrink-0 ${
+              isDarkMode
+                ? 'border-white/15 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 hover:border-emerald-400/40 shadow-emerald-950/40'
+                : 'border-[#cfe0cd] bg-[#e8f1e5] text-[#244b2c] hover:bg-[#dbe9d7] hover:border-[#a8cca4] shadow-emerald-900/10'
+            }`}
+          >
+            <User className="h-4 w-4 sm:h-6 sm:w-6" />
+          </button>
+          {showProfileMenu && (
+            <div
+              className={`absolute left-0 mt-2 w-52 rounded-2xl border shadow-xl p-3 z-50 backdrop-blur-xl ${
+                isDarkMode
+                  ? 'bg-slate-950/95 border-slate-800 text-slate-200 shadow-black/60'
+                  : 'bg-white/95 border-emerald-900/15 text-[#0f2415] shadow-emerald-950/10'
+              }`}
+            >
+              <p className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                Profile
+              </p>
+              <p className="mt-1 truncate text-sm font-semibold">{displayName}</p>
+            </div>
+          )}
+        </div>
 
         {renderGreeting && (
           <div
