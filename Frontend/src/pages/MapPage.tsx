@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
-import { VectorPolygon, MapPin, Sparkles, Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { VectorPolygon, MapPin, Sparkles, Loader2, AlertCircle, X } from 'lucide-react';
 import '../components/map/map.css';
 import { Sidebar } from '../components/layout/Sidebar';
 import { NAV_ITEMS } from '../constants/navigation';
@@ -28,27 +28,6 @@ import { CheckpointForm } from '../components/map/CheckpointForm';
 import { useApp } from '../context/useApp';
 
 const ALL_NASAS_LAYERS = [...NASAS_LAYERS, ...NASAS_LAYERS_UNAVAILABLE];
-const MAP_FARMS_STORAGE_KEY = 'shiftscale_map_farms';
-
-function readSavedFarms(): Farm[] {
-  try {
-    const stored = localStorage.getItem(MAP_FARMS_STORAGE_KEY);
-    if (!stored) return [];
-    const farms: unknown = JSON.parse(stored);
-    return Array.isArray(farms) ? (farms as Farm[]) : [];
-  } catch (error) {
-    console.warn('Could not read saved map farms:', error);
-    return [];
-  }
-}
-
-function saveFarms(farms: Farm[]): void {
-  try {
-    localStorage.setItem(MAP_FARMS_STORAGE_KEY, JSON.stringify(farms));
-  } catch (error) {
-    console.error('Could not save map farms:', error);
-  }
-}
 
 const GHANA_LOCATIONS: Record<
   string,
@@ -82,6 +61,27 @@ const GHANA_LOCATIONS: Record<
   goaso: { lat: 6.8, lng: -2.5167, region: 'Ahafo' },
 };
 
+function findNearestGhanaLocation(
+  lat: number,
+  lng: number
+): { name: string; region: string } | null {
+  let closestDist = Infinity;
+  let closest: { name: string; region: string } | null = null;
+  for (const [name, data] of Object.entries(GHANA_LOCATIONS)) {
+    const dLat = data.lat - lat;
+    const dLng = data.lng - lng;
+    const distSq = dLat * dLat + dLng * dLng;
+    if (distSq < closestDist) {
+      closestDist = distSq;
+      closest = {
+        name: name.charAt(0).toUpperCase() + name.slice(1),
+        region: data.region,
+      };
+    }
+  }
+  return closest;
+}
+
 interface MapPageProps {
   isDarkMode: boolean;
   onToggleTheme?: () => void;
@@ -94,17 +94,22 @@ export const MapPage: React.FC<MapPageProps> = ({
   onSelectNav,
   embedded = false,
 }) => {
-  const { defaultFarm } = useApp();
-  const [savedFarms, setSavedFarms] = useState<Farm[]>(readSavedFarms);
-  const [selectedFarm, setSelectedFarm] = useState<Farm | null>(
-    savedFarms[0] ?? null
+  const {
+    defaultFarm,
+    addFarm,
+    updateFarm,
+    appPreferences,
+    updateLocationPreferences,
+  } = useApp();
+  const [selectedFarm, setSelectedFarm] = useState<Farm | null>(defaultFarm);
+  const initialLocation = defaultFarm.center;
+  const [basemap, setBasemap] = useState<'street' | 'satellite' | 'terrain'>(
+    appPreferences.defaultBasemap
   );
-  const initialLocation = selectedFarm?.center ?? defaultFarm.center;
-  const [basemap, setBasemap] = useState<'street' | 'satellite' | 'terrain'>('street');
   const [activeLayers, setActiveLayers] = useState<ActiveLayer[]>(
     NASAS_LAYERS.map((l) => ({
       id: l.id,
-      enabled: false,
+      enabled: appPreferences.defaultMapLayer === l.id,
       opacity: 0.6,
     }))
   );
@@ -119,24 +124,14 @@ export const MapPage: React.FC<MapPageProps> = ({
     source: 'manual',
   }));
   const [selected, setSelected] = useState<FarmLocation | null>(initialLocation);
-  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(() =>
-    initialLocation
-  );
   const [searchQuery, setSearchQuery] = useState('');
   const [resetView, setResetView] = useState(0);
 
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
   const [drawing, setDrawing] = useState(false);
-  const [showLocationPrompt, setShowLocationPrompt] = useState(() => {
-    try {
-      if (localStorage.getItem('fieldshift_location_allowed') === 'true') {
-        return false;
-      }
-    } catch {
-      // ignore
-    }
-    return true;
-  });
+  // Ask for location accessibility when entering the map tab
+  const [showLocationPrompt, setShowLocationPrompt] = useState(true);
+  const [showDeniedNotice, setShowDeniedNotice] = useState(false);
   const [showCheckpointForm, setShowCheckpointForm] = useState(false);
   const [isManualPicking, setIsManualPicking] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
@@ -196,10 +191,6 @@ export const MapPage: React.FC<MapPageProps> = ({
     }));
   }, []);
 
-  const onCoordsChange = useCallback((lat: number, lng: number) => {
-    setCoordinates({ lat, lng });
-  }, []);
-
   const onSearch = useCallback((query: string) => {
     const clean = query.trim().toLowerCase();
     if (!clean) return;
@@ -242,8 +233,7 @@ export const MapPage: React.FC<MapPageProps> = ({
         lat: sumLat / rings.length,
         lng: sumLng / rings.length,
       };
-      const farm: Farm = {
-        id: `farm-${Date.now()}`,
+      const farm = addFarm({
         name: `Farm #${Math.floor(100 + Math.random() * 900)}`,
         boundary,
         areaHectares: areaHa,
@@ -251,21 +241,13 @@ export const MapPage: React.FC<MapPageProps> = ({
         dominantCrop: 'Maize & Cassava',
         farmingSystem: 'Rainfed',
         region: isWithinGhanaBounds(center.lat, center.lng) ? 'Ghana' : undefined,
-        district: undefined,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
         center,
-      };
-      setSavedFarms((prev) => {
-        const next = [farm, ...prev];
-        saveFarms(next);
-        return next;
       });
       setSelectedFarm(farm);
       setSelected(center);
       setDrawing(false);
     },
-    []
+    [addFarm]
   );
 
   const onCancelDrawing = useCallback(() => {
@@ -278,20 +260,14 @@ export const MapPage: React.FC<MapPageProps> = ({
 
   const onFarmRenamed = useCallback(
     (farmId: string, newName: string) => {
-      const updatedFarms = savedFarms.map((farm) =>
-        farm.id === farmId
-          ? { ...farm, name: newName, updatedAt: new Date().toISOString() }
-          : farm
-      );
-      setSavedFarms(updatedFarms);
-      saveFarms(updatedFarms);
+      updateFarm(farmId, { name: newName });
       setSelectedFarm((farm) =>
         farm?.id === farmId
           ? { ...farm, name: newName, updatedAt: new Date().toISOString() }
           : farm
       );
     },
-    [savedFarms]
+    [updateFarm]
   );
 
   const readings: VulnerabilityReading[] = useMemo(() => {
@@ -357,8 +333,9 @@ export const MapPage: React.FC<MapPageProps> = ({
     setIsLocating(true);
     setLocation((prev) => ({ ...prev, status: 'requesting', errorMessage: null }));
     try {
-      const pos = await getCurrentLocation({ timeoutMs: 8000, highAccuracy: true });
+      const pos = await getCurrentLocation({ timeoutMs: 10000, highAccuracy: true });
       const loc = { lat: pos.lat, lng: pos.lng };
+      const nearest = findNearestGhanaLocation(pos.lat, pos.lng);
       setSelected(loc);
       setLocation((prev) => ({
         ...prev,
@@ -367,44 +344,124 @@ export const MapPage: React.FC<MapPageProps> = ({
         source: 'gps',
         status: 'granted',
         gpsAccuracyMeters: pos.accuracyMeters,
-        region: isWithinGhanaBounds(pos.lat, pos.lng) ? 'Ghana' : null,
-        district: null,
+        region: nearest ? nearest.region : isWithinGhanaBounds(pos.lat, pos.lng) ? 'Ghana' : null,
+        district: nearest ? `Near ${nearest.name}` : null,
         errorMessage: null,
       }));
+      updateLocationPreferences({
+        permissionStatus: 'granted',
+        preferredDetectionMode: 'gps',
+        hasAllowedLocation: true,
+        preferredRegion: nearest?.region || 'Ashanti',
+        lastKnownGps: {
+          lat: pos.lat,
+          lng: pos.lng,
+          accuracy: pos.accuracyMeters,
+          timestamp: pos.timestamp,
+        },
+      });
       try {
-        localStorage.setItem('fieldshift_location_allowed', 'true');
+        sessionStorage.setItem('agrointel_location_granted', 'true');
       } catch {
         // ignore
       }
       setShowLocationPrompt(false);
-      setIsLocating(false);
+      setShowDeniedNotice(false);
       setHciMessage('📍 GPS position locked! Flying to your location…');
       setTimeout(() => setHciMessage(null), 3500);
-    } catch {
-      // Graceful HCI fallback: if browser GPS is blocked, timed out, or unavailable,
-      // never leave the user frozen. Auto-glide to Ghana's farming hub (Kumasi) so something always moves!
-      const fallbackLoc = { lat: 6.6885, lng: -1.6244 };
-      setSelected(fallbackLoc);
-      setLocation((prev) => ({
-        ...prev,
-        userLocation: fallbackLoc,
-        farmLocation: fallbackLoc,
-        source: 'gps',
-        status: 'confirmed',
-        region: 'Ashanti (Kumasi)',
-        errorMessage: 'GPS signal slow/blocked — auto-focused on Kumasi, Ghana.',
-      }));
-      try {
-        localStorage.setItem('fieldshift_location_allowed', 'true');
-      } catch {
-        // ignore
+    } catch (error: unknown) {
+      const reason = error instanceof Error ? error.message : 'unavailable';
+      const status =
+        reason === 'denied' || reason === 'timeout' ? reason : 'unavailable';
+
+      if (status === 'denied') {
+        const message =
+          'Location access was not granted. You can still use the map or click "Use My Location" anytime.';
+        setLocation((prev) => ({
+          ...prev,
+          userLocation: null,
+          status: 'denied',
+          errorMessage: message,
+        }));
+        updateLocationPreferences({
+          permissionStatus: 'denied',
+          preferredDetectionMode: 'manual',
+          hasAllowedLocation: false,
+        });
+        setShowLocationPrompt(false);
+        setShowDeniedNotice(true);
+        setHciMessage(message);
+        setTimeout(() => setHciMessage(null), 5000);
+      } else {
+        // Desktop timeout or unavailable fallback: smoothly glide to Kumasi hub so the user is never stuck
+        const fallbackLoc = { lat: 6.6885, lng: -1.6244 };
+        setSelected(fallbackLoc);
+        setLocation((prev) => ({
+          ...prev,
+          userLocation: fallbackLoc,
+          farmLocation: fallbackLoc,
+          source: 'gps',
+          status: 'confirmed',
+          region: 'Ashanti (Kumasi)',
+          errorMessage: 'GPS signal unavailable on this device — auto-focused on Kumasi, Ghana.',
+        }));
+        updateLocationPreferences({
+          permissionStatus: 'confirmed',
+          preferredDetectionMode: 'manual',
+          hasAllowedLocation: true,
+        });
+        setShowLocationPrompt(false);
+        setShowDeniedNotice(false);
+        setHciMessage('📍 Auto-focused on Kumasi, Ghana. You can tap anywhere to adjust.');
+        setTimeout(() => setHciMessage(null), 4000);
       }
-      setShowLocationPrompt(false);
+    } finally {
       setIsLocating(false);
-      setHciMessage('📍 Auto-focused on Kumasi, Ghana. You can tap anywhere to adjust.');
-      setTimeout(() => setHciMessage(null), 4000);
     }
-  }, []);
+  }, [updateLocationPreferences]);
+
+  // Auto-locate seamlessly if user previously chose "Always allow"
+  useEffect(() => {
+    try {
+      const mode = localStorage.getItem('agrointel_location_permission_mode');
+      if (mode === 'always' && !location.userLocation) {
+        const timer = setTimeout(() => {
+          handleLocateMe();
+        }, 150);
+        return () => clearTimeout(timer);
+      }
+    } catch {
+      // ignore
+    }
+  }, [handleLocateMe, location.userLocation]);
+
+  const handleAlwaysAllow = useCallback(async () => {
+    try {
+      localStorage.setItem('agrointel_location_permission_mode', 'always');
+    } catch {
+      // ignore
+    }
+    setShowLocationPrompt(false);
+    await handleLocateMe();
+  }, [handleLocateMe]);
+
+  const handleAllowThisTime = useCallback(async () => {
+    try {
+      localStorage.removeItem('agrointel_location_permission_mode');
+    } catch {
+      // ignore
+    }
+    setShowLocationPrompt(false);
+    await handleLocateMe();
+  }, [handleLocateMe]);
+
+  const handleDontAllow = useCallback(() => {
+    setShowLocationPrompt(false);
+    updateLocationPreferences({
+      preferredDetectionMode: 'manual',
+      hasAllowedLocation: false,
+    });
+  }, [updateLocationPreferences]);
 
   const useCurrentAsFarm = useCallback(() => {
     if (!location.userLocation) return;
@@ -428,7 +485,7 @@ export const MapPage: React.FC<MapPageProps> = ({
               isDarkMode ? 'text-white' : 'text-[#0b1c10]'
             }`}
           >
-            Field Map &amp; Vulnerability Analyzer
+            Interactive Field &amp; Satellite Map
           </h2>
           <p className={`mt-1 text-sm ${isDarkMode ? 'text-slate-400' : 'text-[#34533a]'}`}>
             NASA Earth observation data for farm-level vulnerability and adaptation analysis in Ghana.
@@ -450,11 +507,30 @@ export const MapPage: React.FC<MapPageProps> = ({
 
         {/* Center Main Map View */}
         <div className="flex-1 flex flex-col gap-3 min-w-0">
+          {/* Friendly Location Access Notice (when permission is denied) */}
+          {showDeniedNotice && location.status === 'denied' && (
+            <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200 text-xs sm:text-sm font-medium animate-in fade-in slide-in-from-top-1">
+              <div className="flex items-center gap-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>
+                  Location access was not granted. You can continue exploring the map normally, or click &ldquo;Use My Location&rdquo; whenever you&apos;re ready.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDeniedNotice(false)}
+                className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer text-amber-700 dark:text-amber-300"
+                aria-label="Dismiss notice"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
           <TopToolbar
             basemap={basemap}
             basemapOptions={basemapOptions}
             onBasemapChange={setBasemap}
-            coordinates={coordinates}
             onResetView={onResetView}
             onSearch={onSearch}
             selectedFarm={selectedFarm}
@@ -548,7 +624,6 @@ export const MapPage: React.FC<MapPageProps> = ({
               location={location}
               selected={selected}
               onLocationSelect={onLocationSelect}
-              onCoordsChange={onCoordsChange}
               selectedFarm={selectedFarm}
               checkpoints={checkpoints}
               drawing={drawing}
@@ -607,25 +682,10 @@ export const MapPage: React.FC<MapPageProps> = ({
 
       {showLocationPrompt && (
         <LocationPrompt
-          onUseCurrent={handleLocateMe}
-          onSelectManually={() => {
-            try {
-              localStorage.setItem('fieldshift_location_allowed', 'true');
-            } catch {
-              // ignore
-            }
-            setShowLocationPrompt(false);
-            setIsManualPicking(true);
-            setLocation((prev) => ({ ...prev, status: 'idle' }));
-          }}
-          onClose={() => {
-            try {
-              localStorage.setItem('fieldshift_location_allowed', 'true');
-            } catch {
-              // ignore
-            }
-            setShowLocationPrompt(false);
-          }}
+          onAlwaysAllow={handleAlwaysAllow}
+          onAllowThisTime={handleAllowThisTime}
+          onDontAllow={handleDontAllow}
+          onClose={handleDontAllow}
           isLocating={isLocating}
           isDarkMode={isDarkMode}
         />

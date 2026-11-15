@@ -104,8 +104,10 @@ export interface Farm {
   soilType: SoilType;
   dominantCrop: string;
   farmingSystem: FarmingSystem;
+  irrigation?: string;
   region?: string;
   district?: string;
+  farmerObservations?: string;
   createdAt: string;
   updatedAt: string;
   center: FarmLocation;
