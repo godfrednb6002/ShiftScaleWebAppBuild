@@ -1,16 +1,39 @@
-import React from 'react';
-import { Layers, Search, Sparkles } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Layers, Search, Sparkles, RefreshCw } from 'lucide-react';
 import type { WeatherProfile } from '../../constants/weatherProfiles';
 
 interface HeroForecastCardProps {
   isDarkMode: boolean;
   weather: WeatherProfile;
+  isClimateLoading: boolean;
+  climateError: string | null;
+  onRefreshClimate: () => void;
 }
 
 export const HeroForecastCard: React.FC<HeroForecastCardProps> = ({
   isDarkMode,
   weather,
+  isClimateLoading,
+  climateError,
+  onRefreshClimate,
 }) => {
+  const [iconOnly, setIconOnly] = useState(false);
+  const iconOnlyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (iconOnlyTimer.current) clearTimeout(iconOnlyTimer.current);
+  }, []);
+
+  function refreshClimate() {
+    setIconOnly(true);
+    if (iconOnlyTimer.current) clearTimeout(iconOnlyTimer.current);
+    iconOnlyTimer.current = setTimeout(() => {
+      setIconOnly(false);
+      iconOnlyTimer.current = null;
+    }, 5000);
+    onRefreshClimate();
+  }
+
   return (
     <div
       className={`relative flex-1 rounded-3xl overflow-hidden min-h-[540px] flex flex-col p-4 sm:p-8 lg:p-10 border shadow-xl transition-all duration-500 ${
@@ -25,6 +48,34 @@ export const HeroForecastCard: React.FC<HeroForecastCardProps> = ({
           isDarkMode ? 'brightness-80' : 'brightness-100'
         }`}
       />
+
+      <div className="absolute right-4 top-4 z-30 flex max-w-[calc(100%-2rem)] flex-col items-end gap-2">
+        <button
+          aria-label="Refresh NASA POWER climate data"
+          className={`flex items-center justify-center gap-2 rounded-xl border border-white/80 bg-white/85 py-2 text-xs font-bold text-[#102414] shadow-lg backdrop-blur-md transition-all duration-300 ease-in-out hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-wait disabled:opacity-70 ${
+            iconOnly ? 'px-2.5' : 'px-3'
+          }`}
+          disabled={isClimateLoading}
+          onClick={refreshClimate}
+          title="Fetch recent NASA POWER data"
+          type="button"
+        >
+          <RefreshCw aria-hidden="true" className={`h-3.5 w-3.5 shrink-0 ${isClimateLoading ? 'animate-spin' : ''}`} />
+          {!iconOnly && (
+            <span className="whitespace-nowrap">
+              {isClimateLoading ? 'Loading climate…' : 'Refresh NASA POWER'}
+            </span>
+          )}
+        </button>
+        {climateError && (
+          <p
+            className="max-w-64 rounded-lg border border-red-300 bg-red-50/95 px-3 py-2 text-xs font-semibold text-red-900 shadow-lg"
+            role="alert"
+          >
+            NASA POWER: {climateError}
+          </p>
+        )}
+      </div>
 
       {/* Pure Frosted Glass Overlay */}
       <div className="absolute inset-0 bg-white/10 backdrop-blur-xs" />
