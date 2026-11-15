@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { ProfileDataService } from '../lib/profileService';
 import { FarmPortfolioView } from './FarmPortfolioView';
+import { useApp } from '../context/useApp';
 import type { Farm } from '../types';
 import shiftScaleWhiteLogo from '../assets/shiftScaleWhiteLogo.png';
 import shiftScaleBlackLogo from '../assets/shiftScaleBlackLogo.png';
@@ -39,9 +40,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   onSelectNav,
   onOpenFarmOnMap,
 }) => {
+  const { farms } = useApp();
   // Real persisted profile data
   const [profile, setProfile] = useState<UserProfile>(() => ProfileDataService.getProfile());
-  const [farms] = useState<Farm[]>(() => ProfileDataService.getFarms());
 
   // View state: 'profile' or 'portfolio' (Page to view listed farms)
   const [viewMode, setViewMode] = useState<'profile' | 'portfolio'>('profile');

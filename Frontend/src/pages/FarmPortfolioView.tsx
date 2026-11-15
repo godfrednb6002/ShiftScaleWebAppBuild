@@ -11,7 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import type { Farm } from '../types';
-import { ProfileDataService } from '../lib/profileService';
+import { useApp } from '../context/useApp';
 import shiftScaleWhiteLogo from '../assets/shiftScaleWhiteLogo.png';
 import shiftScaleBlackLogo from '../assets/shiftScaleBlackLogo.png';
 
@@ -21,22 +21,20 @@ interface FarmPortfolioViewProps {
   onBack: () => void;
   onOpenFarmOnMap: (farm: Farm) => void;
   onMapNewPlot: () => void;
-  onFarmsUpdated?: (updatedFarms: Farm[]) => void;
 }
 
 export const FarmPortfolioView: React.FC<FarmPortfolioViewProps> = ({
-  farms: initialFarms,
+  farms,
   isDarkMode,
   onBack,
   onOpenFarmOnMap,
   onMapNewPlot,
-  onFarmsUpdated,
 }) => {
-  const [farmsList, setFarmsList] = useState<Farm[]>(initialFarms);
+  const { updateFarm } = useApp();
   const [editingFarmId, setEditingFarmId] = useState<string | null>(null);
   const [editingNameValue, setEditingNameValue] = useState<string>('');
 
-  const totalFarmArea = farmsList.reduce((acc, f) => acc + (f.areaHectares || 0), 0);
+  const totalFarmArea = farms.reduce((acc, f) => acc + (f.areaHectares || 0), 0);
 
   const startEditing = (farm: Farm) => {
     setEditingFarmId(farm.id);
@@ -51,14 +49,8 @@ export const FarmPortfolioView: React.FC<FarmPortfolioViewProps> = ({
   const saveFarmName = (farmId: string) => {
     const trimmed = editingNameValue.trim();
     if (!trimmed) return;
-    const ok = ProfileDataService.updateFarmName(farmId, trimmed);
-    if (ok) {
-      const updated = farmsList.map((f) =>
-        f.id === farmId ? { ...f, name: trimmed, updatedAt: new Date().toISOString() } : f
-      );
-      setFarmsList(updated);
-      onFarmsUpdated?.(updated);
-    }
+    if (!farms.some((farm) => farm.id === farmId)) return;
+    updateFarm(farmId, { name: trimmed });
     setEditingFarmId(null);
   };
 
@@ -108,7 +100,7 @@ export const FarmPortfolioView: React.FC<FarmPortfolioViewProps> = ({
                 </h2>
               </div>
               <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-[#34533a]'}`}>
-                {farmsList.length} Registered Plots across Ghana • {totalFarmArea.toFixed(2)} Total Hectares
+                {farms.length} Registered Plots across Ghana • {totalFarmArea.toFixed(2)} Total Hectares
               </p>
             </div>
           </div>
@@ -128,7 +120,7 @@ export const FarmPortfolioView: React.FC<FarmPortfolioViewProps> = ({
       </div>
 
       {/* Farms List */}
-      {farmsList.length === 0 ? (
+      {farms.length === 0 ? (
         <div className={`${cardBase} text-center py-12`}>
           <Compass className="w-12 h-12 mx-auto text-gray-400 mb-3 opacity-50" />
           <h3 className="text-base font-bold">No registered farms</h3>
@@ -144,7 +136,7 @@ export const FarmPortfolioView: React.FC<FarmPortfolioViewProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {farmsList.map((farm) => {
+          {farms.map((farm) => {
             const isEditing = editingFarmId === farm.id;
             return (
               <div key={farm.id} className={`${subCardBase} flex flex-col justify-between`}>

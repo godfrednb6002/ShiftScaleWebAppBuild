@@ -5,6 +5,7 @@ from app.api.v1.endpoints import (
     ecostress,
     gaez,
     health,
+    crop_rotation,
     nasa_power,
     smap,
     srtm,
@@ -29,3 +30,7 @@ api_router.include_router(
 )
 api_router.include_router(srtm.router)
 api_router.include_router(ecostress.router)
+api_router.include_router(
+    crop_rotation.router,
+    prefix="/v1/crop-rotation",
+)

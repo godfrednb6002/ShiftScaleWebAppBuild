@@ -39,7 +39,8 @@ The Profile page is available from the drawer or header profile menu. Profile
 and example farm data are stored only in browser local storage; authentication,
 password changes, and sign-out are not connected.
 
-The Crop Rotation Planner is a local rule-based scenario prototype available
-from the drawer. It does not fetch NASA datasets, and its displayed observation
-examples, risk scores, and benefit estimates are not validated farm-specific
-results.
+The Crop Rotation Planner sends selected crops, soil type, farm region, farm
+area, and farming system to the backend Gemini integration to generate one
+rotation draft. The farm name and coordinates are not sent. The result is not
+validated agronomic advice and does not include satellite observations or
+quantified yield/benefit claims; review it with local agricultural expertise.
