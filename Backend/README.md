@@ -54,6 +54,13 @@ and absent observations are returned as JSON `null`. Upstream request failures
 return HTTP 502; timeouts return HTTP 504. The service does not cache or invent
 data.
 
+`GET /api/v1/nasa/power/climate-profile` accepts the same coordinates and date
+range and returns compact monthly rainfall normals, annual precipitation,
+mean temperature, hot-day counts (`T2M_MAX > 30°C`), and rainfall variability.
+The predictive analytics page uses this endpoint to display measured climate
+history; its scenario indices, crop-water demand, and yield comparisons remain
+illustrative.
+
 ## NASA GPM IMERG V07 downloader
 
 The original `download_files_GPM_3IMERGDF_07.py` downloader is available under

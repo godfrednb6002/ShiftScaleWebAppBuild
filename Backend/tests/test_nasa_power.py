@@ -3,14 +3,25 @@ import unittest
 from unittest.mock import Mock, patch
 
 from fastapi import HTTPException
+from fastapi.testclient import TestClient
 
-from app.api.v1.endpoints.nasa_power import get_daily_climate_data
-from app.schemas.nasa_power import NasaPowerDailyResponse
+from app.main import create_application
+from app.api.v1.endpoints.nasa_power import (
+    get_climate_profile,
+    get_daily_climate_data,
+)
+from app.schemas.nasa_power import (
+    DailyClimateRecord,
+    NasaPowerDailyResponse,
+)
 from app.services.nasa import nasa_power
+from app.services.nasa.power_analytics import build_climate_profile
 
 
 START_DATE = date(2024, 1, 1)
 END_DATE = date(2024, 1, 2)
+PROFILE_START_DATE = date(2023, 1, 1)
+PROFILE_END_DATE = date(2024, 2, 1)
 
 
 def make_power_payload() -> dict:
@@ -124,3 +135,134 @@ class TestNasaPowerService(unittest.TestCase):
         with self.assertRaises(HTTPException) as raised:
             get_daily_climate_data(0, 0, START_DATE, END_DATE)
         self.assertEqual(raised.exception.status_code, 504)
+
+
+class TestNasaPowerClimateProfile(unittest.TestCase):
+    def setUp(self) -> None:
+        self.response = NasaPowerDailyResponse(
+            latitude=6.7,
+            longitude=-1.6,
+            elevation_m=220,
+            start_date=date(2023, 1, 1),
+            end_date=date(2024, 2, 1),
+            units={},
+            daily=[
+                DailyClimateRecord(
+                    date=date(2023, 1, 1),
+                    t2m_c=20,
+                    t2m_max_c=32,
+                    t2m_min_c=15,
+                    precipitation_mm_day=1,
+                    relative_humidity_pct=60,
+                    wind_speed_m_s=2,
+                    allsky_sfc_sw_down_mj_m2_day=18,
+                ),
+                DailyClimateRecord(
+                    date=date(2023, 1, 2),
+                    t2m_c=22,
+                    t2m_max_c=29,
+                    t2m_min_c=16,
+                    precipitation_mm_day=2,
+                    relative_humidity_pct=62,
+                    wind_speed_m_s=2,
+                    allsky_sfc_sw_down_mj_m2_day=19,
+                ),
+                DailyClimateRecord(
+                    date=date(2023, 2, 1),
+                    t2m_c=24,
+                    t2m_max_c=31,
+                    t2m_min_c=17,
+                    precipitation_mm_day=4,
+                    relative_humidity_pct=64,
+                    wind_speed_m_s=3,
+                    allsky_sfc_sw_down_mj_m2_day=20,
+                ),
+                DailyClimateRecord(
+                    date=date(2024, 1, 1),
+                    t2m_c=26,
+                    t2m_max_c=31,
+                    t2m_min_c=18,
+                    precipitation_mm_day=3,
+                    relative_humidity_pct=66,
+                    wind_speed_m_s=3,
+                    allsky_sfc_sw_down_mj_m2_day=21,
+                ),
+                DailyClimateRecord(
+                    date=date(2024, 2, 1),
+                    t2m_c=28,
+                    t2m_max_c=29,
+                    t2m_min_c=19,
+                    precipitation_mm_day=None,
+                    relative_humidity_pct=68,
+                    wind_speed_m_s=4,
+                    allsky_sfc_sw_down_mj_m2_day=22,
+                ),
+            ],
+        )
+
+    def test_builds_monthly_and_annual_observed_summaries(self) -> None:
+        profile = build_climate_profile(self.response)
+
+        self.assertEqual(profile.monthly[0].month, "Jan")
+        self.assertEqual(profile.monthly[0].precipitation, 3)
+        self.assertEqual(profile.monthly[0].hot_days, 1)
+        self.assertEqual(profile.monthly[1].precipitation, 4)
+        self.assertEqual(profile.monthly[1].hot_days, 0.5)
+        self.assertEqual(profile.annual[0].precipitation, 7)
+        self.assertEqual(profile.annual[0].temperature, 22)
+        self.assertEqual(profile.annual[0].hot_days, 2)
+        self.assertEqual(profile.mean_annual_rainfall, 5)
+        self.assertEqual(profile.mean_annual_hot_days, 1.5)
+        self.assertAlmostEqual(profile.annual_rainfall_variability, 0.4)
+
+    @patch("app.api.v1.endpoints.nasa_power.fetch_daily_climate_data")
+    def test_endpoint_aggregates_daily_data(self, fetch: Mock) -> None:
+        fetch.return_value = self.response
+
+        profile = get_climate_profile(
+            6.7, -1.6, PROFILE_START_DATE, PROFILE_END_DATE
+        )
+
+        self.assertEqual(profile.latitude, 6.7)
+        self.assertEqual(len(profile.monthly), 12)
+        self.assertEqual(len(profile.annual), 2)
+        fetch.assert_called_once_with(
+            latitude=6.7,
+            longitude=-1.6,
+            start_date=PROFILE_START_DATE,
+            end_date=PROFILE_END_DATE,
+        )
+
+    def test_endpoint_rejects_reversed_date_range(self) -> None:
+        with self.assertRaises(HTTPException) as raised:
+            get_climate_profile(0, 0, END_DATE, START_DATE)
+        self.assertEqual(raised.exception.status_code, 422)
+
+    @patch("app.api.v1.endpoints.nasa_power.fetch_daily_climate_data")
+    def test_endpoint_maps_upstream_failure(self, fetch: Mock) -> None:
+        fetch.side_effect = nasa_power.NasaPowerResponseError("upstream error")
+
+        with self.assertRaises(HTTPException) as raised:
+            get_climate_profile(0, 0, PROFILE_START_DATE, PROFILE_END_DATE)
+        self.assertEqual(raised.exception.status_code, 502)
+
+    @patch("app.api.v1.endpoints.nasa_power.fetch_daily_climate_data")
+    def test_http_route_returns_compact_profile(self, fetch: Mock) -> None:
+        fetch.return_value = self.response
+        client = TestClient(create_application())
+
+        result = client.get(
+            "/api/v1/nasa/power/climate-profile",
+            params={
+                "latitude": 6.7,
+                "longitude": -1.6,
+                "start_date": PROFILE_START_DATE.isoformat(),
+                "end_date": PROFILE_END_DATE.isoformat(),
+            },
+        )
+
+        self.assertEqual(result.status_code, 200)
+        payload = result.json()
+        self.assertEqual(len(payload["monthly"]), 12)
+        self.assertEqual(payload["annual"][0]["year"], 2023)
+        self.assertEqual(payload["mean_annual_rainfall"], 5)
