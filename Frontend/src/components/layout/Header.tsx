@@ -7,6 +7,7 @@ import { useApp } from '../../context/useApp';
 interface HeaderProps {
   userName?: string;
   isDarkMode: boolean;
+  onNavigateProfile?: () => void;
   onToggleMobileDrawer?: () => void;
   isMobileDrawerOpen?: boolean;
 }
@@ -14,6 +15,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   userName: propUserName,
   isDarkMode,
+  onNavigateProfile,
   onToggleMobileDrawer,
   isMobileDrawerOpen = false,
 }) => {
@@ -112,6 +114,20 @@ export const Header: React.FC<HeaderProps> = ({
                 Profile
               </p>
               <p className="mt-1 truncate text-sm font-semibold">{displayName}</p>
+              {onNavigateProfile && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowProfileMenu(false);
+                    onNavigateProfile();
+                  }}
+                  className={`mt-3 w-full rounded-lg px-3 py-2 text-left text-xs font-semibold ${
+                    isDarkMode ? 'bg-white/5 hover:bg-white/10' : 'bg-emerald-50 hover:bg-emerald-100'
+                  }`}
+                >
+                  View profile
+                </button>
+              )}
             </div>
           )}
         </div>
