@@ -1,21 +1,5 @@
 import React, { useState } from 'react';
 import {
-<<<<<<< HEAD
-  MapPin,
-  ExternalLink,
-  Plus,
-  Compass,
-  ArrowLeft,
-  Layers,
-  Edit2,
-  Check,
-  X,
-} from 'lucide-react';
-import type { Farm } from '../types';
-import { ProfileDataService } from '../lib/profileService';
-import shiftScaleWhiteLogo from '../assets/shiftScaleWhiteLogo.png';
-import shiftScaleBlackLogo from '../assets/shiftScaleBlackLogo.png';
-=======
   ArrowLeft,
   Check,
   Compass,
@@ -30,7 +14,6 @@ import shiftScaleBlackLogo from '../assets/shiftScaleBlackLogo.png';
 import shiftScaleWhiteLogo from '../assets/shiftScaleWhiteLogo.png';
 import { ProfileDataService } from '../lib/profileService';
 import type { Farm } from '../types';
->>>>>>> 79b05cedc8b900cc6eebdea0df3edc353982e44c
 
 interface FarmPortfolioViewProps {
   farms: Farm[];
@@ -53,11 +36,7 @@ export const FarmPortfolioView: React.FC<FarmPortfolioViewProps> = ({
   const [editingFarmId, setEditingFarmId] = useState<string | null>(null);
   const [editingNameValue, setEditingNameValue] = useState<string>('');
 
-<<<<<<< HEAD
-  const totalFarmArea = farmsList.reduce((acc, f) => acc + (f.areaHectares || 0), 0);
-=======
   const totalFarmArea = farmsList.reduce((acc, farm) => acc + (farm.areaHectares || 0), 0);
->>>>>>> 79b05cedc8b900cc6eebdea0df3edc353982e44c
 
   const startEditing = (farm: Farm) => {
     setEditingFarmId(farm.id);
@@ -72,26 +51,16 @@ export const FarmPortfolioView: React.FC<FarmPortfolioViewProps> = ({
   const saveFarmName = (farmId: string) => {
     const trimmed = editingNameValue.trim();
     if (!trimmed) return;
-<<<<<<< HEAD
-    const ok = ProfileDataService.updateFarmName(farmId, trimmed);
-    if (ok) {
-      const updated = farmsList.map((f) =>
-        f.id === farmId ? { ...f, name: trimmed, updatedAt: new Date().toISOString() } : f
-=======
 
     const ok = ProfileDataService.updateFarmName(farmId, trimmed);
     if (ok) {
       const updated = farmsList.map((farm) =>
         farm.id === farmId ? { ...farm, name: trimmed, updatedAt: new Date().toISOString() } : farm
->>>>>>> 79b05cedc8b900cc6eebdea0df3edc353982e44c
       );
       setFarmsList(updated);
       onFarmsUpdated?.(updated);
     }
-<<<<<<< HEAD
-=======
 
->>>>>>> 79b05cedc8b900cc6eebdea0df3edc353982e44c
     setEditingFarmId(null);
   };
 
@@ -109,10 +78,6 @@ export const FarmPortfolioView: React.FC<FarmPortfolioViewProps> = ({
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto w-full animate-in fade-in duration-200">
-<<<<<<< HEAD
-      {/* Header bar with Back button & New plot button */}
-=======
->>>>>>> 79b05cedc8b900cc6eebdea0df3edc353982e44c
       <div className={cardBase}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -163,10 +128,6 @@ export const FarmPortfolioView: React.FC<FarmPortfolioViewProps> = ({
         </div>
       </div>
 
-<<<<<<< HEAD
-      {/* Farms List */}
-=======
->>>>>>> 79b05cedc8b900cc6eebdea0df3edc353982e44c
       {farmsList.length === 0 ? (
         <div className={`${cardBase} text-center py-12`}>
           <Compass className="w-12 h-12 mx-auto text-gray-400 mb-3 opacity-50" />
@@ -185,10 +146,7 @@ export const FarmPortfolioView: React.FC<FarmPortfolioViewProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {farmsList.map((farm) => {
             const isEditing = editingFarmId === farm.id;
-<<<<<<< HEAD
-=======
 
->>>>>>> 79b05cedc8b900cc6eebdea0df3edc353982e44c
             return (
               <div key={farm.id} className={`${subCardBase} flex flex-col justify-between`}>
                 <div>
@@ -199,17 +157,10 @@ export const FarmPortfolioView: React.FC<FarmPortfolioViewProps> = ({
                           <input
                             type="text"
                             value={editingNameValue}
-<<<<<<< HEAD
-                            onChange={(e) => setEditingNameValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') saveFarmName(farm.id);
-                              if (e.key === 'Escape') cancelEditing();
-=======
                             onChange={(event) => setEditingNameValue(event.target.value)}
                             onKeyDown={(event) => {
                               if (event.key === 'Enter') saveFarmName(farm.id);
                               if (event.key === 'Escape') cancelEditing();
->>>>>>> 79b05cedc8b900cc6eebdea0df3edc353982e44c
                             }}
                             autoFocus
                             placeholder="Farm name"
@@ -242,85 +193,13 @@ export const FarmPortfolioView: React.FC<FarmPortfolioViewProps> = ({
                           <button
                             type="button"
                             onClick={() => startEditing(farm)}
-<<<<<<< HEAD
-                            title="Rename farm"
-                            className="opacity-70 group-hover:opacity-100 p-1 rounded-md hover:bg-emerald-500/20 text-emerald-400 cursor-pointer transition-opacity shrink-0"
-=======
                             className="p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-emerald-600 hover:bg-emerald-100 dark:hover:bg-slate-800 cursor-pointer"
                             title="Edit farm name"
->>>>>>> 79b05cedc8b900cc6eebdea0df3edc353982e44c
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       )}
-<<<<<<< HEAD
-                      <div className="flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-400 mt-1">
-                        <MapPin className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">
-                          {farm.region || 'Ghana'}
-                          {farm.district ? `, ${farm.district}` : ''}
-                        </span>
-                      </div>
-                    </div>
-                    <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 shrink-0">
-                      {farm.areaHectares.toFixed(2)} ha
-                    </span>
-                  </div>
-
-                  <div
-                    className={`text-xs space-y-2 py-3 border-y ${
-                      isDarkMode ? 'border-white/10 text-slate-300' : 'border-gray-200 text-[#2a452f]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="opacity-70">Soil Classification:</span>
-                      <span className="font-bold">{farm.soilType}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="opacity-70">Dominant Crops:</span>
-                      <span className="font-bold">{farm.dominantCrop}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="opacity-70">Farming System:</span>
-                      <span className="font-bold">{farm.farmingSystem}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="opacity-70">GPS Centre:</span>
-                      <span className="font-mono text-[11px] font-semibold">
-                        {farm.center.lat.toFixed(4)}°N, {Math.abs(farm.center.lng).toFixed(4)}°W
-                      </span>
-                    </div>
-                  </div>
-
-                  {farm.farmerObservations && (
-                    <p
-                      className={`mt-3 text-xs italic p-3 rounded-xl border ${
-                        isDarkMode
-                          ? 'bg-slate-900/60 border-slate-800 text-slate-400'
-                          : 'bg-white/60 border-white/80 text-[#34533a]'
-                      }`}
-                    >
-                      "{farm.farmerObservations}"
-                    </p>
-                  )}
-                </div>
-
-                <div className="mt-5 pt-3 flex items-center justify-between">
-                  <span className="text-[11px] opacity-60">
-                    Registered {new Date(farm.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </span>
-                  <button
-                    onClick={() => onOpenFarmOnMap(farm)}
-                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-xs ${
-                      isDarkMode
-                        ? 'border-emerald-500/30 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'
-                        : 'border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100'
-                    }`}
-                  >
-                    <span>View on Map</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-=======
                     </div>
                   </div>
 
@@ -356,7 +235,6 @@ export const FarmPortfolioView: React.FC<FarmPortfolioViewProps> = ({
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                     <span>Open on Map</span>
->>>>>>> 79b05cedc8b900cc6eebdea0df3edc353982e44c
                   </button>
                 </div>
               </div>
