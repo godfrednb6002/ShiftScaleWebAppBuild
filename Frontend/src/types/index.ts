@@ -47,6 +47,7 @@ export interface MetricConfig {
 export interface NavItem {
   name: string;
   icon: LucideIcon;
+  path: string;
 }
 
 export interface FarmLocation {

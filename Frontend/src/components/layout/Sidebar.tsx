@@ -34,8 +34,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="space-y-6">
         {/* Brand / Logo Header */}
         <div className="flex items-center justify-between px-2 py-1 select-none">
-          <div
-            onClick={() => {
+          <a
+            href="/dashboard"
+            onClick={(e) => {
+              e.preventDefault();
               onSelectNav('Dashboard');
               if (onCloseMobileDrawer) onCloseMobileDrawer();
             }}
@@ -57,7 +59,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 Earth Decisions AI
               </span>
             </div>
-          </div>
+          </a>
 
           {/* Close button inside mobile drawer */}
           {onCloseMobileDrawer && (
@@ -83,11 +85,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             const isActive = activeNav === item.name;
             const isWalkthroughStep = walkthroughNavItem === item.name;
             return (
-              <button
+              <a
                 key={item.name}
-                type="button"
+                href={item.path}
                 data-walkthrough-section={item.name}
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
                   onSelectNav(item.name);
                   if (onCloseMobileDrawer) onCloseMobileDrawer();
                 }}
@@ -116,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <span className="text-left whitespace-pre-line leading-tight">
                       {item.name}
                     </span>
-                  </button>
+                  </a>
                 );
               })}
             </nav>
