@@ -544,7 +544,7 @@ export function CropPlannerPage({ isDarkMode }: CropPlannerPageProps) {
                       <div>
                         {/* Planting Window Badge */}
                         <div className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-400">
-                          <span>🌱 Plant {MONTH_NAMES[phase.start_month - 1]} – {MONTH_NAMES[phase.end_month - 1]}</span>
+                          <span>Plant {MONTH_NAMES[phase.start_month - 1]} – {MONTH_NAMES[phase.end_month - 1]}</span>
                           <span className="opacity-60">•</span>
                           <span>{phase.duration_days} days</span>
                         </div>
