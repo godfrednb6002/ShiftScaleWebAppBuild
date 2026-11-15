@@ -1,16 +1,46 @@
-# React + Vite
+# ShiftScale Dashboard Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The dashboard frontend was copied from the existing ShiftScale frontend into
+this project without moving or modifying the source files.
 
-Currently, two official plugins are available:
+## Run locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```powershell
+npm install
+npm run dev
+```
 
-## React Compiler
+Vite prints the local URL after the development server starts.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Validate
 
-## Expanding the Oxlint configuration
+```powershell
+npm run build
+npm run lint
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+The original dashboard weather interface, including its live feed and condition
+simulator, is retained. Relative humidity, precipitation, and wind cards use
+NASA POWER daily data for the current farm. The dashboard automatically
+requests the latest eight calendar days, including today, on load; because
+NASA POWER can report a delay, cards use the latest available observation and
+show its date. The weather image card has a refresh button whose label
+collapses to an icon briefly when clicked. Wind speeds are converted from m/s
+to km/h for display.
+
+The dashboard includes a predictive-analytics scenario simulator with
+hypothetical rainfall and temperature controls, summary indicators, water
+balance and rotation comparison visualizations. These are prototype examples,
+not calibrated forecasts or agronomic recommendations; historical trend values
+are explicitly illustrative rather than measured NASA data. Local `.env` files
+are not included.
+
+The Profile page is available from the drawer or header profile menu. Profile
+and example farm data are stored only in browser local storage; authentication,
+password changes, and sign-out are not connected.
+
+The Crop Rotation Planner sends selected crops, soil type, farm region, farm
+area, and farming system to the backend Gemini integration to generate one
+rotation draft. The farm name and coordinates are not sent. The result is not
+validated agronomic advice and does not include satellite observations or
+quantified yield/benefit claims; review it with local agricultural expertise.

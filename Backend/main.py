@@ -1,27 +1,32 @@
-import os
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
+"""Application entrypoint for uvicorn server."""
+import uvicorn
+from app.main import app, create_application
+from app.core.config import settings
 
-load_dotenv()
+# Export models and services for backward-compatibility with tests importing from main
+from app.schemas.ecostress import FieldObservation, AssessmentResponse, CatalogResponse
+from app.services.nasa.ecostress_service import build_assessment
+from app.schemas.srtm import TerrainSample, TerrainSummary, DatasetTask
+from app.services.nasa.srtm_service import DATASET_3_TASK, summarize_srtm
 
-app = FastAPI(title="ShiftScale API", version="0.1.0")
+__all__ = [
+    "app",
+    "create_application",
+    "FieldObservation",
+    "AssessmentResponse",
+    "CatalogResponse",
+    "build_assessment",
+    "TerrainSample",
+    "TerrainSummary",
+    "DatasetTask",
+    "DATASET_3_TASK",
+    "summarize_srtm",
+]
 
-# CORS setup
-origins = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[origin.strip() for origin in origins],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-@app.get("/")
-def read_root():
-    return {"message": "ShiftScale Backend is running!", "status": "healthy"}
-
-@app.get("/api/health")
-def health_check():
-    return {"status": "ok"}
+if __name__ == "__main__":
+    uvicorn.run(
+        "main:app",
+        host=settings.host,
+        port=settings.port,
+        reload=settings.environment == "development",
+    )
