@@ -18,6 +18,8 @@ import type {
   AccountProfile,
 } from './AppContextBase';
 
+const FARM_STORAGE_MIGRATION_KEY = 'fieldshift_farms_profile_migration_v1';
+
 function loadStorage<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
@@ -50,18 +52,36 @@ function isFarm(value: unknown): value is Farm {
 
 function loadFarms(): Farm[] {
   const stored = loadStorage<unknown>(STORAGE_KEYS.farms, null);
-  if (Array.isArray(stored)) {
-    const farms = stored.filter(isFarm);
-    if (farms.length) return farms;
+  const currentFarms = Array.isArray(stored) ? stored.filter(isFarm) : [];
+
+  try {
+    if (localStorage.getItem(FARM_STORAGE_MIGRATION_KEY) === 'complete') {
+      return currentFarms.length ? currentFarms : DEFAULT_FARMS;
+    }
+  } catch (error) {
+    console.warn('Could not check whether farm storage was migrated.', error);
   }
 
-  const legacy = loadStorage<unknown>('shiftscale_map_farms', null);
-  if (Array.isArray(legacy)) {
-    const farms = legacy.filter(isFarm);
-    if (farms.length) return [...farms, ...DEFAULT_FARMS];
+  const legacyProfile = loadStorage<unknown>('shiftscale_dashboard_farms', null);
+  const legacyMap = loadStorage<unknown>('shiftscale_map_farms', null);
+  const legacyFarms = [
+    ...(Array.isArray(legacyProfile) ? legacyProfile.filter(isFarm) : []),
+    ...(Array.isArray(legacyMap) ? legacyMap.filter(isFarm) : []),
+  ];
+  const farmsById = new Map<string, Farm>();
+  for (const farm of [...currentFarms, ...legacyFarms, ...DEFAULT_FARMS]) {
+    if (!farmsById.has(farm.id)) farmsById.set(farm.id, farm);
+  }
+  const migratedFarms = [...farmsById.values()];
+
+  try {
+    localStorage.setItem(STORAGE_KEYS.farms, JSON.stringify(migratedFarms));
+    localStorage.setItem(FARM_STORAGE_MIGRATION_KEY, 'complete');
+  } catch (error) {
+    console.warn('Could not migrate farms to shared storage.', error);
   }
 
-  return DEFAULT_FARMS;
+  return migratedFarms;
 }
 
 function downloadFile(filename: string, content: string, mimeType: string): void {
@@ -252,6 +272,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const clearAllCache = () => {
     Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
     localStorage.removeItem('shiftscale_map_farms');
+    localStorage.removeItem('shiftscale_dashboard_farms');
+    localStorage.setItem(FARM_STORAGE_MIGRATION_KEY, 'complete');
     localStorage.removeItem('fieldshift_location_allowed');
     setFarms(DEFAULT_FARMS);
     setDefaultFarmIdState(DEFAULT_FARMS[0].id);
