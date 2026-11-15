@@ -22,3 +22,28 @@ class NasaPowerDailyResponse(BaseModel):
     end_date: date
     units: dict[str, str]
     daily: list[DailyClimateRecord]
+
+
+class MonthlyClimateProfile(BaseModel):
+    month: str
+    precipitation: float | None
+    hot_days: float | None
+
+
+class AnnualClimateProfile(BaseModel):
+    year: int
+    precipitation: float | None
+    temperature: float | None
+    hot_days: int | None
+
+
+class NasaPowerClimateProfile(BaseModel):
+    latitude: float
+    longitude: float
+    start_date: date
+    end_date: date
+    monthly: list[MonthlyClimateProfile]
+    annual: list[AnnualClimateProfile]
+    mean_annual_rainfall: float | None
+    mean_annual_hot_days: float | None
+    annual_rainfall_variability: float | None
