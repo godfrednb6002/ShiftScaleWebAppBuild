@@ -1,28 +1,31 @@
 import React, { useState } from 'react';
 import {
-  AlertCircle,
+  MapPin,
   Calendar,
-  Check,
   CheckCircle2,
-  Compass,
+  ShieldCheck,
   Edit3,
   ExternalLink,
-  Key,
-  LogOut,
-  MapPin,
   Plus,
-  ShieldCheck,
+  Compass,
   Sprout,
+  LogOut,
+  Key,
   X,
+  Check,
+  AlertCircle,
+  Sparkles,
 } from 'lucide-react';
 import { ProfileDataService } from '../lib/profileService';
 import { FarmPortfolioView } from './FarmPortfolioView';
 import type { Farm } from '../types';
+import shiftScaleWhiteLogo from '../assets/shiftScaleWhiteLogo.png';
+import shiftScaleBlackLogo from '../assets/shiftScaleBlackLogo.png';
 import type {
-  AgriculturalInterest,
+  UserProfile,
   FarmerType,
   FarmingSystemOption,
-  UserProfile,
+  AgriculturalInterest,
 } from '../types/profile';
 
 interface ProfilePageProps {
@@ -31,35 +34,19 @@ interface ProfilePageProps {
   onOpenFarmOnMap?: (farmId: string) => void;
 }
 
-const farmerTypes: FarmerType[] = [
-  'Smallholder farmer',
-  'Commercial farmer',
-  'Agricultural entrepreneur',
-  'Farm manager',
-  'Agricultural student',
-  'Other',
-];
-
-const farmingSystems: FarmingSystemOption[] = ['Rain-fed', 'Irrigated', 'Mixed'];
-
-const agriculturalInterests: AgriculturalInterest[] = [
-  'Soil health',
-  'Water conservation',
-  'Crop rotation',
-  'Sustainable farming',
-  'Climate adaptation',
-  'Precision agriculture',
-];
-
 export const ProfilePage: React.FC<ProfilePageProps> = ({
   isDarkMode,
   onSelectNav,
   onOpenFarmOnMap,
 }) => {
+  // Real persisted profile data
   const [profile, setProfile] = useState<UserProfile>(() => ProfileDataService.getProfile());
   const [farms] = useState<Farm[]>(() => ProfileDataService.getFarms());
+
+  // View state: 'profile' or 'portfolio' (Page to view listed farms)
   const [viewMode, setViewMode] = useState<'profile' | 'portfolio'>('profile');
 
+  // Edit Personal Information Modal State
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
   const [personalForm, setPersonalForm] = useState({
     fullName: profile.fullName,
@@ -72,6 +59,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     bio: profile.bio || '',
   });
 
+  // Edit Farmer Information Modal State
   const [isEditingFarmer, setIsEditingFarmer] = useState(false);
   const [farmerForm, setFarmerForm] = useState({
     farmerType: profile.farmerType,
@@ -81,6 +69,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     agriculturalInterests: [...profile.agriculturalInterests],
   });
 
+  // Account / Password confirmation state
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordState, setPasswordState] = useState({
     currentPassword: '',
@@ -92,15 +81,17 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const showToast = (message: string) => {
-    setToastMessage(message);
-    window.setTimeout(() => setToastMessage(null), 3500);
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const totalFarmArea = farms.reduce((acc, farm) => acc + (farm.areaHectares || 0), 0);
+  // Portfolio Totals calculated directly from real records
+  const totalFarmArea = farms.reduce((acc, f) => acc + (f.areaHectares || 0), 0);
 
-  const handleSavePersonal = (event: React.FormEvent) => {
-    event.preventDefault();
+  // Handle Personal Info Save
+  const handleSavePersonal = (e: React.FormEvent) => {
+    e.preventDefault();
     if (!personalForm.fullName.trim()) return;
 
     const updated: UserProfile = {
@@ -121,18 +112,19 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     showToast('Personal information updated successfully.');
   };
 
-  const handleSaveFarmer = (event: React.FormEvent) => {
-    event.preventDefault();
-    const crops = farmerForm.mainCrops
+  // Handle Farmer Info Save
+  const handleSaveFarmer = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cropsArr = farmerForm.mainCrops
       .split(',')
-      .map((crop) => crop.trim())
+      .map((c) => c.trim())
       .filter(Boolean);
 
     const updated: UserProfile = {
       ...profile,
       farmerType: farmerForm.farmerType,
       yearsExperience: Number(farmerForm.yearsExperience) || 0,
-      mainCrops: crops.length > 0 ? crops : profile.mainCrops,
+      mainCrops: cropsArr.length > 0 ? cropsArr : profile.mainCrops,
       farmingSystem: farmerForm.farmingSystem,
       agriculturalInterests: farmerForm.agriculturalInterests,
     };
@@ -144,46 +136,42 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   };
 
   const toggleInterest = (interest: AgriculturalInterest) => {
-    setFarmerForm((previous) => {
-      const exists = previous.agriculturalInterests.includes(interest);
+    setFarmerForm((prev) => {
+      const exists = prev.agriculturalInterests.includes(interest);
       if (exists) {
         return {
-          ...previous,
-          agriculturalInterests: previous.agriculturalInterests.filter((item) => item !== interest),
+          ...prev,
+          agriculturalInterests: prev.agriculturalInterests.filter((i) => i !== interest),
         };
       }
-
       return {
-        ...previous,
-        agriculturalInterests: [...previous.agriculturalInterests, interest],
+        ...prev,
+        agriculturalInterests: [...prev.agriculturalInterests, interest],
       };
     });
   };
 
-  const handlePasswordUpdate = (event: React.FormEvent) => {
-    event.preventDefault();
-
+  const handlePasswordUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
     if (!passwordState.currentPassword) {
-      setPasswordState((previous) => ({
-        ...previous,
+      setPasswordState((prev) => ({
+        ...prev,
         status: 'error',
         message: 'Please enter your current password.',
       }));
       return;
     }
-
     if (passwordState.newPassword.length < 8) {
-      setPasswordState((previous) => ({
-        ...previous,
+      setPasswordState((prev) => ({
+        ...prev,
         status: 'error',
         message: 'New password must be at least 8 characters long.',
       }));
       return;
     }
-
     if (passwordState.newPassword !== passwordState.confirmPassword) {
-      setPasswordState((previous) => ({
-        ...previous,
+      setPasswordState((prev) => ({
+        ...prev,
         status: 'error',
         message: 'New passwords do not match.',
       }));
@@ -197,8 +185,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       status: 'success',
       message: 'Password securely changed.',
     });
-
-    window.setTimeout(() => {
+    setTimeout(() => {
       setShowPasswordModal(false);
       setPasswordState({
         currentPassword: '',
@@ -220,6 +207,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     }
   };
 
+  // Get Initials for avatar
   const getInitials = (name: string) => {
     const parts = name.trim().split(' ');
     if (parts.length >= 2) {
@@ -240,6 +228,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       : 'bg-white/70 border-white/90 text-[#112314]'
   }`;
 
+  // If user opened the dedicated Listed Farms page
   if (viewMode === 'portfolio') {
     return (
       <FarmPortfolioView
@@ -254,17 +243,23 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
+      {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 flex items-center gap-2 px-4 py-3 rounded-2xl bg-emerald-950/90 text-emerald-200 border border-emerald-500/50 shadow-2xl backdrop-blur-md text-xs font-bold">
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-2 px-4 py-3 rounded-2xl bg-emerald-950/90 text-emerald-200 border border-emerald-500/50 shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-top-3 text-xs font-bold">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
+      {/* Main Page Content */}
       <div className="space-y-6 max-w-7xl mx-auto w-full">
+        {/* ========================================================================= */}
+        {/* PROFILE HEADER */}
+        {/* ========================================================================= */}
         <div className={cardBase}>
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex items-center gap-5">
+              {/* Profile Avatar / Initials */}
               <div className="relative">
                 <div
                   className={`w-20 h-20 sm:w-24 sm:h-24 rounded-3xl flex items-center justify-center font-black text-2xl sm:text-3xl border shadow-lg ${
@@ -285,6 +280,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 )}
               </div>
 
+              {/* Identity & Location */}
               <div>
                 <div className="flex flex-wrap items-center gap-2 mb-1">
                   <h2
@@ -311,19 +307,27 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                   )}
                 </div>
 
-                <p className={`text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-[#1c3823]'}`}>
+                <p
+                  className={`text-xs font-semibold ${
+                    isDarkMode ? 'text-slate-300' : 'text-[#1c3823]'
+                  }`}
+                >
                   {profile.designation}
                 </p>
 
-                <div className={`flex flex-wrap items-center gap-4 mt-2 text-xs ${isDarkMode ? 'text-slate-400' : 'text-[#34533a]'}`}>
+                <div
+                  className={`flex flex-wrap items-center gap-4 mt-2 text-xs ${
+                    isDarkMode ? 'text-slate-400' : 'text-[#34533a]'
+                  }`}
+                >
                   <span className="flex items-center gap-1">
                     <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    {profile.townCommunity}, {profile.district}, {profile.region} ({profile.country})
+                    {profile.townCommunity}, {profile.district}, {profile.region} (
+                    {profile.country})
                   </span>
                   <span className="flex items-center gap-1">
                     <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    Member since{' '}
-                    {new Date(profile.accountCreatedAt).toLocaleDateString('en-US', {
+                    Member since {new Date(profile.accountCreatedAt).toLocaleDateString('en-US', {
                       month: 'short',
                       year: 'numeric',
                     })}
@@ -332,6 +336,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               </div>
             </div>
 
+            {/* Edit Profile Actions */}
             <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0 w-full md:w-auto">
               <button
                 onClick={() => {
@@ -381,13 +386,22 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           </div>
         </div>
 
+        {/* 2-Column Responsive Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column (2 Cols) */}
           <div className="lg:col-span-2 space-y-6">
+            {/* ========================================================================= */}
+            {/* FARMER PROFILE & AGRICULTURAL PRACTICES */}
+            {/* ========================================================================= */}
             <div className={cardBase}>
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-300/30">
                 <div className="flex items-center gap-2.5">
                   <Sprout className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                  <h3 className={`text-lg font-extrabold ${isDarkMode ? 'text-white' : 'text-[#0b1c10]'}`}>
+                  <h3
+                    className={`text-lg font-extrabold ${
+                      isDarkMode ? 'text-white' : 'text-[#0b1c10]'
+                    }`}
+                  >
                     Agricultural Profile &amp; Practices
                   </h3>
                 </div>
@@ -404,30 +418,44 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className={subCardBase}>
-                  <div className={`text-[11px] font-bold uppercase tracking-wider mb-1 ${isDarkMode ? 'text-slate-400' : 'text-[#34533a]'}`}>
+                  <div
+                    className={`text-[11px] font-bold uppercase tracking-wider mb-1 ${
+                      isDarkMode ? 'text-slate-400' : 'text-[#34533a]'
+                    }`}
+                  >
                     Farming System
                   </div>
                   <div className="text-sm font-extrabold flex items-center gap-1.5">
                     <Compass className="w-4 h-4 text-emerald-500" />
                     <span>{profile.farmingSystem} System</span>
                   </div>
-                  <p className={`mt-2 text-xs ${isDarkMode ? 'text-slate-300' : 'text-[#1c3823]'}`}>
-                    Field operations aligned to the seasonal rainfall and soil moisture profile for the farm.
+                  <p
+                    className={`text-[11px] mt-1 ${
+                      isDarkMode ? 'text-slate-400' : 'text-[#34533a]/80'
+                    }`}
+                  >
+                    {profile.farmingSystem === 'Rain-fed'
+                      ? 'Dependent on bi-modal rainfall cycles; highly reliant on SMAP root-zone moisture tracking.'
+                      : 'Equipped with supplemental irrigation capacity for off-season vegetable rotations.'}
                   </p>
                 </div>
 
                 <div className={subCardBase}>
-                  <div className={`text-[11px] font-bold uppercase tracking-wider mb-1 ${isDarkMode ? 'text-slate-400' : 'text-[#34533a]'}`}>
-                    Primary Crops
+                  <div
+                    className={`text-[11px] font-bold uppercase tracking-wider mb-1 ${
+                      isDarkMode ? 'text-slate-400' : 'text-[#34533a]'
+                    }`}
+                  >
+                    Primary Cultivated Crops
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
                     {profile.mainCrops.map((crop) => (
                       <span
                         key={crop}
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                        className={`text-xs font-bold px-2.5 py-1 rounded-xl border ${
                           isDarkMode
-                            ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/20'
-                            : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                            ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                            : 'bg-white border-emerald-200 text-emerald-950 shadow-xs'
                         }`}
                       >
                         {crop}
@@ -437,65 +465,113 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 </div>
               </div>
 
-              <div className="mt-5">
-                <div className={`text-[11px] font-bold uppercase tracking-wider mb-2 ${isDarkMode ? 'text-slate-400' : 'text-[#34533a]'}`}>
-                  Agricultural Interests
+              <div className="mt-4">
+                <div
+                  className={`text-[11px] font-bold uppercase tracking-wider mb-2 ${
+                    isDarkMode ? 'text-slate-400' : 'text-[#34533a]'
+                  }`}
+                >
+                  Agricultural Priorities &amp; NASA Science Interests
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {profile.agriculturalInterests.map((interest) => (
                     <span
                       key={interest}
-                      className={`px-2.5 py-1.5 rounded-full text-[11px] font-bold border ${
+                      className={`text-xs font-semibold px-3 py-1.5 rounded-2xl border flex items-center gap-1.5 ${
                         isDarkMode
-                          ? 'bg-slate-800/80 text-slate-200 border-slate-700'
-                          : 'bg-white border-emerald-200 text-emerald-900'
+                          ? 'bg-slate-900/60 border-slate-700 text-slate-200'
+                          : 'bg-white/80 border-white text-[#112314] shadow-xs'
                       }`}
                     >
-                      {interest}
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>{interest}</span>
                     </span>
                   ))}
                 </div>
               </div>
+            </div>
 
-              <div className="mt-6 flex flex-wrap items-center gap-2">
-                <button
-                  onClick={() => setViewMode('portfolio')}
-                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border text-xs font-bold transition-all cursor-pointer shadow-sm ${
-                    isDarkMode
-                      ? 'border-emerald-500/40 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'
-                      : 'border-emerald-300 bg-[#102414] text-white hover:bg-emerald-950'
-                  }`}
-                >
-                  <span>View Listed Farms</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </button>
+            {/* ========================================================================= */}
+            {/* REGISTERED FARM PORTFOLIO */}
+            {/* ========================================================================= */}
+            <div className={cardBase}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3.5">
+                  <img
+                    src={isDarkMode ? shiftScaleWhiteLogo : shiftScaleBlackLogo}
+                    alt="ShiftScale Logo"
+                    className="h-12 w-auto object-contain shrink-0"
+                  />
+                  <div>
+                    <h3
+                      className={`text-lg font-extrabold ${
+                        isDarkMode ? 'text-white' : 'text-[#0b1c10]'
+                      }`}
+                    >
+                      Registered Farm Portfolio
+                    </h3>
+                    <p
+                      className={`text-xs ${
+                        isDarkMode ? 'text-slate-400' : 'text-[#34533a]'
+                      }`}
+                    >
+                      {farms.length} Registered Plots • {totalFarmArea.toFixed(2)} Total Hectares
+                    </p>
+                  </div>
+                </div>
 
-                <button
-                  onClick={() => onSelectNav('Map')}
-                  className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl border text-xs font-bold transition-all cursor-pointer shadow-xs ${
-                    isDarkMode
-                      ? 'border-white/10 bg-white/5 text-slate-200 hover:bg-white/10'
-                      : 'border-emerald-900/15 bg-white text-emerald-950 hover:bg-gray-50'
-                  }`}
-                  title="Map a new parcel on satellite"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Map New Plot</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setViewMode('portfolio')}
+                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border text-xs font-bold transition-all cursor-pointer shadow-sm ${
+                      isDarkMode
+                        ? 'border-emerald-500/40 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'
+                        : 'border-emerald-300 bg-[#102414] text-white hover:bg-emerald-950'
+                    }`}
+                  >
+                    <span>View Listed Farms</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    onClick={() => onSelectNav('Map')}
+                    className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl border text-xs font-bold transition-all cursor-pointer shadow-xs ${
+                      isDarkMode
+                        ? 'border-white/10 bg-white/5 text-slate-200 hover:bg-white/10'
+                        : 'border-emerald-900/15 bg-white text-emerald-950 hover:bg-gray-50'
+                    }`}
+                    title="Map a new parcel on satellite"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Map New Plot</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
+          {/* Right Column (1 Col) */}
           <div className="space-y-6">
+            {/* ========================================================================= */}
+            {/* ACCOUNT INFORMATION & SECURITY */}
+            {/* ========================================================================= */}
             <div className={cardBase}>
               <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-300/30">
                 <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                <h3 className={`text-base font-extrabold ${isDarkMode ? 'text-white' : 'text-[#0b1c10]'}`}>
+                <h3
+                  className={`text-base font-extrabold ${
+                    isDarkMode ? 'text-white' : 'text-[#0b1c10]'
+                  }`}
+                >
                   Account &amp; Security
                 </h3>
               </div>
 
-              <div className={`space-y-3 text-xs ${isDarkMode ? 'text-slate-300' : 'text-[#1c3823]'}`}>
+              <div
+                className={`space-y-3 text-xs ${
+                  isDarkMode ? 'text-slate-300' : 'text-[#1c3823]'
+                }`}
+              >
                 <div className="flex items-center justify-between pb-2 border-b border-gray-300/20">
                   <span className="opacity-70">Email:</span>
                   <span className="font-bold">{profile.email}</span>
@@ -534,7 +610,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
                 <button
                   onClick={() => {
-                    if (window.confirm('Are you sure you want to sign out of ShiftScale?')) {
+                    if (confirm('Are you sure you want to sign out of ShiftScale?')) {
                       showToast('Signed out of session.');
                     }
                   }}
@@ -549,36 +625,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 </button>
               </div>
             </div>
-
-            <div className={cardBase}>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className={`text-base font-extrabold ${isDarkMode ? 'text-white' : 'text-[#0b1c10]'}`}>
-                  Farm Summary
-                </h3>
-                <span className={`text-[11px] px-2 py-1 rounded-full ${isDarkMode ? 'bg-slate-800' : 'bg-emerald-100 text-emerald-900'}`}>
-                  {farms.length} plots
-                </span>
-              </div>
-
-              <div className="space-y-3 text-xs">
-                <div className="flex items-center justify-between border-b border-gray-300/20 pb-2">
-                  <span className="opacity-70">Total area</span>
-                  <span className="font-bold">{totalFarmArea.toFixed(2)} ha</span>
-                </div>
-                <div className="flex items-center justify-between border-b border-gray-300/20 pb-2">
-                  <span className="opacity-70">Main crop</span>
-                  <span className="font-bold truncate max-w-[60%]">{profile.mainCrops[0]}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="opacity-70">Verified</span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">Yes</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
 
+      {/* ========================================================================= */}
+      {/* MODAL: EDIT PERSONAL INFORMATION */}
+      {/* ========================================================================= */}
       {isEditingPersonal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <button
@@ -608,7 +661,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 <input
                   type="text"
                   value={personalForm.fullName}
-                  onChange={(event) => setPersonalForm({ ...personalForm, fullName: event.target.value })}
+                  onChange={(e) =>
+                    setPersonalForm({ ...personalForm, fullName: e.target.value })
+                  }
                   required
                   className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
                     isDarkMode
@@ -623,7 +678,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 <input
                   type="text"
                   value={personalForm.designation}
-                  onChange={(event) => setPersonalForm({ ...personalForm, designation: event.target.value })}
+                  onChange={(e) =>
+                    setPersonalForm({ ...personalForm, designation: e.target.value })
+                  }
                   className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
                     isDarkMode
                       ? 'bg-slate-900 border-slate-700 text-white'
@@ -632,27 +689,30 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="block font-bold mb-1">Phone Number</label>
-                <input
-                  type="tel"
-                  value={personalForm.phoneNumber}
-                  onChange={(event) => setPersonalForm({ ...personalForm, phoneNumber: event.target.value })}
-                  className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                    isDarkMode
-                      ? 'bg-slate-900 border-slate-700 text-white'
-                      : 'bg-emerald-50/40 border-gray-300 text-black'
-                  }`}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold mb-1">Phone Number</label>
+                  <input
+                    type="text"
+                    value={personalForm.phoneNumber}
+                    onChange={(e) =>
+                      setPersonalForm({ ...personalForm, phoneNumber: e.target.value })
+                    }
+                    className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                      isDarkMode
+                        ? 'bg-slate-900 border-slate-700 text-white'
+                        : 'bg-emerald-50/40 border-gray-300 text-black'
+                    }`}
+                  />
+                </div>
                 <div>
                   <label className="block font-bold mb-1">Country</label>
                   <input
                     type="text"
                     value={personalForm.country}
-                    onChange={(event) => setPersonalForm({ ...personalForm, country: event.target.value })}
+                    onChange={(e) =>
+                      setPersonalForm({ ...personalForm, country: e.target.value })
+                    }
                     className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
                       isDarkMode
                         ? 'bg-slate-900 border-slate-700 text-white'
@@ -660,12 +720,17 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                     }`}
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block font-bold mb-1">Region</label>
                   <input
                     type="text"
                     value={personalForm.region}
-                    onChange={(event) => setPersonalForm({ ...personalForm, region: event.target.value })}
+                    onChange={(e) =>
+                      setPersonalForm({ ...personalForm, region: e.target.value })
+                    }
                     className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
                       isDarkMode
                         ? 'bg-slate-900 border-slate-700 text-white'
@@ -673,15 +738,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                     }`}
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold mb-1">District</label>
                   <input
                     type="text"
                     value={personalForm.district}
-                    onChange={(event) => setPersonalForm({ ...personalForm, district: event.target.value })}
+                    onChange={(e) =>
+                      setPersonalForm({ ...personalForm, district: e.target.value })
+                    }
                     className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
                       isDarkMode
                         ? 'bg-slate-900 border-slate-700 text-white'
@@ -690,11 +754,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block font-bold mb-1">Community</label>
+                  <label className="block font-bold mb-1">Town / Community</label>
                   <input
                     type="text"
                     value={personalForm.townCommunity}
-                    onChange={(event) => setPersonalForm({ ...personalForm, townCommunity: event.target.value })}
+                    onChange={(e) =>
+                      setPersonalForm({ ...personalForm, townCommunity: e.target.value })
+                    }
                     className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
                       isDarkMode
                         ? 'bg-slate-900 border-slate-700 text-white'
@@ -704,31 +770,17 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="block font-bold mb-1">Bio / Summary</label>
-                <textarea
-                  value={personalForm.bio}
-                  onChange={(event) => setPersonalForm({ ...personalForm, bio: event.target.value })}
-                  rows={3}
-                  className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                    isDarkMode
-                      ? 'bg-slate-900 border-slate-700 text-white'
-                      : 'bg-emerald-50/40 border-gray-300 text-black'
-                  }`}
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-4 border-t border-gray-300/30">
                 <button
                   type="button"
                   onClick={() => setIsEditingPersonal(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-bold"
+                  className="px-4 py-2 rounded-xl border border-gray-300 font-semibold text-xs cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer shadow-md"
                 >
                   Save Changes
                 </button>
@@ -738,6 +790,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         </div>
       )}
 
+      {/* ========================================================================= */}
+      {/* MODAL: EDIT FARMER IDENTITY & AGRICULTURAL PRACTICES */}
+      {/* ========================================================================= */}
       {isEditingFarmer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <button
@@ -745,14 +800,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             className="absolute inset-0 bg-black/75 backdrop-blur-md cursor-pointer border-none"
           />
           <div
-            className={`relative z-10 w-full max-w-2xl rounded-3xl border p-6 shadow-2xl backdrop-blur-2xl transition-all max-h-[90vh] overflow-y-auto ${
+            className={`relative z-10 w-full max-w-lg rounded-3xl border p-6 shadow-2xl backdrop-blur-2xl transition-all max-h-[90vh] overflow-y-auto ${
               isDarkMode
                 ? 'bg-[#0f1f14]/95 border-emerald-900/40 text-slate-200'
                 : 'bg-white border-white/70 text-[#112314]'
             }`}
           >
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-300/30">
-              <h3 className="text-lg font-bold">Edit Farmer Practices</h3>
+              <h3 className="text-lg font-bold">Edit Farmer Practices &amp; Priorities</h3>
               <button
                 onClick={() => setIsEditingFarmer(false)}
                 className="p-1 rounded-lg hover:bg-gray-200/50 dark:hover:bg-slate-800"
@@ -762,33 +817,45 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             </div>
 
             <form onSubmit={handleSaveFarmer} className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold mb-1">Farmer Type</label>
+                  <label className="block font-bold mb-1">Farmer Stakeholder Type</label>
                   <select
                     value={farmerForm.farmerType}
-                    onChange={(event) => setFarmerForm({ ...farmerForm, farmerType: event.target.value as FarmerType })}
+                    onChange={(e) =>
+                      setFarmerForm({
+                        ...farmerForm,
+                        farmerType: e.target.value as FarmerType,
+                      })
+                    }
                     className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
                       isDarkMode
                         ? 'bg-slate-900 border-slate-700 text-white'
                         : 'bg-emerald-50/40 border-gray-300 text-black'
                     }`}
                   >
-                    {farmerTypes.map((item) => (
-                      <option key={item} value={item}>
-                        {item}
-                      </option>
-                    ))}
+                    <option value="Smallholder farmer">Smallholder farmer</option>
+                    <option value="Commercial farmer">Commercial farmer</option>
+                    <option value="Agricultural entrepreneur">Agricultural entrepreneur</option>
+                    <option value="Farm manager">Farm manager</option>
+                    <option value="Agricultural student">Agricultural student</option>
+                    <option value="Other">Other stakeholder</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block font-bold mb-1">Years Experience</label>
+                  <label className="block font-bold mb-1">Years of Experience</label>
                   <input
                     type="number"
-                    min={0}
+                    min="0"
+                    max="65"
                     value={farmerForm.yearsExperience}
-                    onChange={(event) => setFarmerForm({ ...farmerForm, yearsExperience: Number(event.target.value) })}
+                    onChange={(e) =>
+                      setFarmerForm({
+                        ...farmerForm,
+                        yearsExperience: parseInt(e.target.value) || 0,
+                      })
+                    }
                     className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
                       isDarkMode
                         ? 'bg-slate-900 border-slate-700 text-white'
@@ -799,11 +866,38 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               </div>
 
               <div>
-                <label className="block font-bold mb-1">Main Crops</label>
+                <label className="block font-bold mb-1">Farming System</label>
+                <select
+                  value={farmerForm.farmingSystem}
+                  onChange={(e) =>
+                    setFarmerForm({
+                      ...farmerForm,
+                      farmingSystem: e.target.value as FarmingSystemOption,
+                    })
+                  }
+                  className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                    isDarkMode
+                      ? 'bg-slate-900 border-slate-700 text-white'
+                      : 'bg-emerald-50/40 border-gray-300 text-black'
+                  }`}
+                >
+                  <option value="Rain-fed">Rain-fed System</option>
+                  <option value="Irrigated">Irrigated System</option>
+                  <option value="Mixed">Mixed System</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold mb-1">
+                  Main Crops Cultivated (comma-separated)
+                </label>
                 <input
                   type="text"
                   value={farmerForm.mainCrops}
-                  onChange={(event) => setFarmerForm({ ...farmerForm, mainCrops: event.target.value })}
+                  onChange={(e) =>
+                    setFarmerForm({ ...farmerForm, mainCrops: e.target.value })
+                  }
+                  placeholder="e.g. Maize, Cowpea, Cassava, Sorghum"
                   className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
                     isDarkMode
                       ? 'bg-slate-900 border-slate-700 text-white'
@@ -813,62 +907,55 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               </div>
 
               <div>
-                <label className="block font-bold mb-1">Farming System</label>
-                <select
-                  value={farmerForm.farmingSystem}
-                  onChange={(event) => setFarmerForm({ ...farmerForm, farmingSystem: event.target.value as FarmingSystemOption })}
-                  className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                    isDarkMode
-                      ? 'bg-slate-900 border-slate-700 text-white'
-                      : 'bg-emerald-50/40 border-gray-300 text-black'
-                  }`}
-                >
-                  {farmingSystems.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold mb-1">Agricultural Interests</label>
-                <div className="flex flex-wrap gap-2">
-                  {agriculturalInterests.map((interest) => {
-                    const selected = farmerForm.agriculturalInterests.includes(interest);
+                <label className="block font-bold mb-2">Agricultural Interests &amp; Priorities</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(
+                    [
+                      'Soil health',
+                      'Water conservation',
+                      'Crop rotation',
+                      'Sustainable farming',
+                      'Climate adaptation',
+                      'Precision agriculture',
+                    ] as AgriculturalInterest[]
+                  ).map((interest) => {
+                    const isSelected = farmerForm.agriculturalInterests.includes(interest);
                     return (
                       <button
-                        key={interest}
                         type="button"
+                        key={interest}
                         onClick={() => toggleInterest(interest)}
-                        className={`px-3 py-2 rounded-full text-[11px] font-bold border transition-all cursor-pointer ${
-                          selected
-                            ? 'bg-emerald-600 text-white border-emerald-600'
+                        className={`px-3 py-2 rounded-xl border text-left text-xs font-semibold flex items-center justify-between cursor-pointer transition-all ${
+                          isSelected
+                            ? isDarkMode
+                              ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                              : 'bg-emerald-100 border-emerald-300 text-emerald-950 font-bold'
                             : isDarkMode
-                              ? 'bg-slate-800 border-slate-700 text-slate-200'
-                              : 'bg-white border-emerald-200 text-emerald-900'
+                            ? 'bg-slate-900/60 border-slate-700 text-slate-300'
+                            : 'bg-white border-gray-200 text-gray-700'
                         }`}
                       >
-                        {interest}
+                        <span>{interest}</span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-emerald-600" />}
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-4 border-t border-gray-300/30">
                 <button
                   type="button"
                   onClick={() => setIsEditingFarmer(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-bold"
+                  className="px-4 py-2 rounded-xl border border-gray-300 font-semibold text-xs cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer shadow-md"
                 >
-                  Save Changes
+                  Save Practices
                 </button>
               </div>
             </form>
@@ -876,6 +963,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         </div>
       )}
 
+      {/* ========================================================================= */}
+      {/* MODAL: UPDATE PASSWORD */}
+      {/* ========================================================================= */}
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <button
@@ -883,14 +973,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             className="absolute inset-0 bg-black/75 backdrop-blur-md cursor-pointer border-none"
           />
           <div
-            className={`relative z-10 w-full max-w-md rounded-3xl border p-6 shadow-2xl backdrop-blur-2xl ${
+            className={`relative z-10 w-full max-w-md rounded-3xl border p-6 shadow-2xl backdrop-blur-2xl transition-all ${
               isDarkMode
                 ? 'bg-[#0f1f14]/95 border-emerald-900/40 text-slate-200'
                 : 'bg-white border-white/70 text-[#112314]'
             }`}
           >
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-300/30">
-              <h3 className="text-lg font-bold">Update Password</h3>
+              <h3 className="text-lg font-bold">Update Account Password</h3>
               <button
                 onClick={() => setShowPasswordModal(false)}
                 className="p-1 rounded-lg hover:bg-gray-200/50 dark:hover:bg-slate-800"
@@ -899,78 +989,101 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handlePasswordUpdate} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-bold mb-1">Current Password</label>
-                <input
-                  type="password"
-                  value={passwordState.currentPassword}
-                  onChange={(event) => setPasswordState({ ...passwordState, currentPassword: event.target.value })}
-                  className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                    isDarkMode
-                      ? 'bg-slate-900 border-slate-700 text-white'
-                      : 'bg-emerald-50/40 border-gray-300 text-black'
-                  }`}
-                />
+            {passwordState.status === 'success' ? (
+              <div className="py-6 text-center space-y-2">
+                <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
+                <h4 className="font-bold text-sm">Password Updated</h4>
+                <p className="text-xs text-gray-500">{passwordState.message}</p>
               </div>
+            ) : (
+              <form onSubmit={handlePasswordUpdate} className="space-y-4 text-xs">
+                {passwordState.status === 'error' && (
+                  <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-700 dark:text-red-300 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{passwordState.message}</span>
+                  </div>
+                )}
 
-              <div>
-                <label className="block font-bold mb-1">New Password</label>
-                <input
-                  type="password"
-                  value={passwordState.newPassword}
-                  onChange={(event) => setPasswordState({ ...passwordState, newPassword: event.target.value })}
-                  className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                    isDarkMode
-                      ? 'bg-slate-900 border-slate-700 text-white'
-                      : 'bg-emerald-50/40 border-gray-300 text-black'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold mb-1">Confirm New Password</label>
-                <input
-                  type="password"
-                  value={passwordState.confirmPassword}
-                  onChange={(event) => setPasswordState({ ...passwordState, confirmPassword: event.target.value })}
-                  className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
-                    isDarkMode
-                      ? 'bg-slate-900 border-slate-700 text-white'
-                      : 'bg-emerald-50/40 border-gray-300 text-black'
-                  }`}
-                />
-              </div>
-
-              {passwordState.message && (
-                <div
-                  className={`flex items-start gap-2 rounded-xl border px-3 py-2 ${
-                    passwordState.status === 'error'
-                      ? 'border-red-300 bg-red-50 text-red-700'
-                      : 'border-emerald-300 bg-emerald-50 text-emerald-700'
-                  }`}
-                >
-                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                  <span className="text-[11px] font-bold">{passwordState.message}</span>
+                <div>
+                  <label className="block font-bold mb-1">Current Password</label>
+                  <input
+                    type="password"
+                    value={passwordState.currentPassword}
+                    onChange={(e) =>
+                      setPasswordState({
+                        ...passwordState,
+                        currentPassword: e.target.value,
+                        status: 'idle',
+                      })
+                    }
+                    required
+                    className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                      isDarkMode
+                        ? 'bg-slate-900 border-slate-700 text-white'
+                        : 'bg-emerald-50/40 border-gray-300 text-black'
+                    }`}
+                  />
                 </div>
-              )}
 
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowPasswordModal(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-bold"
-                >
-                  Close
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold"
-                >
-                  Save Password
-                </button>
-              </div>
-            </form>
+                <div>
+                  <label className="block font-bold mb-1">New Password (min. 8 characters)</label>
+                  <input
+                    type="password"
+                    value={passwordState.newPassword}
+                    onChange={(e) =>
+                      setPasswordState({
+                        ...passwordState,
+                        newPassword: e.target.value,
+                        status: 'idle',
+                      })
+                    }
+                    required
+                    className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                      isDarkMode
+                        ? 'bg-slate-900 border-slate-700 text-white'
+                        : 'bg-emerald-50/40 border-gray-300 text-black'
+                    }`}
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1">Confirm New Password</label>
+                  <input
+                    type="password"
+                    value={passwordState.confirmPassword}
+                    onChange={(e) =>
+                      setPasswordState({
+                        ...passwordState,
+                        confirmPassword: e.target.value,
+                        status: 'idle',
+                      })
+                    }
+                    required
+                    className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+                      isDarkMode
+                        ? 'bg-slate-900 border-slate-700 text-white'
+                        : 'bg-emerald-50/40 border-gray-300 text-black'
+                    }`}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4 border-t border-gray-300/30">
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordModal(false)}
+                    className="px-4 py-2 rounded-xl border border-gray-300 font-semibold text-xs cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer shadow-md"
+                  >
+                    Update Password
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
