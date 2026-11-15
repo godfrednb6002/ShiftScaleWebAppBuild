@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   Map as MapIcon,
+  Sprout,
   Settings as SettingsIcon,
   TrendingUp,
   UserRound,
@@ -10,6 +11,7 @@ import type { NavItem } from '../types';
 export const NAV_ITEMS: NavItem[] = [
   { name: 'Dashboard', icon: LayoutDashboard },
   { name: 'Predictive Analytics', icon: TrendingUp },
+  { name: 'Crop Rotation Planner', icon: Sprout },
   { name: 'Map', icon: MapIcon },
   { name: 'Profile', icon: UserRound },
   { name: 'Settings', icon: SettingsIcon },
