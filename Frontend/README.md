@@ -19,6 +19,9 @@ npm run build
 npm run lint
 ```
 
-The dashboard includes the source frontend's existing navigation and page
-modules. NASA/GIBS and weather integrations use their public services; local
-`.env` files are not included in the copied source.
+The dashboard includes a predictive-analytics scenario simulator with
+hypothetical rainfall and temperature controls, summary indicators, water
+balance and rotation comparison visualizations. These are prototype examples,
+not calibrated forecasts or agronomic recommendations; historical trend values
+are explicitly illustrative rather than measured NASA data. Local `.env` files
+are not included.

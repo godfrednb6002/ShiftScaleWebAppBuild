@@ -5,6 +5,7 @@ import { Sidebar } from '../components/layout/Sidebar';
 import { MetricButtons } from '../components/dashboard/MetricButtons';
 import { HeroForecastCard } from '../components/dashboard/HeroForecastCard';
 import { MetricBreakdownPanel } from '../components/dashboard/MetricBreakdownPanel';
+import { PredictiveAnalytics } from '../components/dashboard/PredictiveAnalytics';
 import { WEATHER_METRICS_DATA } from '../constants/metricsData';
 import { NAV_ITEMS } from '../constants/navigation';
 import { WEATHER_PROFILES } from '../constants/weatherProfiles';
@@ -133,10 +134,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               isDarkMode ? 'text-white' : 'text-[#0b1c10]'
             }`}
           >
-            {activeNav === 'Map' ? 'Field Map & Vulnerability Analyzer' : 'Today On ShiftScale'}
+            {activeNav === 'Map'
+              ? 'Field Map & Vulnerability Analyzer'
+              : activeNav === 'Predictive Analytics'
+                ? 'Predictive Analytics'
+                : 'Today On ShiftScale'}
           </h2>
 
-          {activeNav !== 'Map' && (
+          {activeNav === 'Dashboard' && (
           <div
             className={`flex items-center gap-1.5 p-1.5 rounded-2xl backdrop-blur-xl border shadow-sm overflow-x-auto no-scrollbar max-w-full transition-all ${
               isDarkMode ? 'bg-black/40 border-white/10' : 'bg-white/50 border-white/70'
@@ -234,11 +239,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             </div>
           </div>
 
-          <div className="flex-1 min-w-0 flex flex-col lg:flex-row gap-5 items-stretch">
+          <div className="flex-1 min-w-0 flex flex-col gap-5">
             {activeNav === 'Map' ? (
               <MapPage isDarkMode={isDarkMode} embedded />
+            ) : activeNav === 'Predictive Analytics' ? (
+              <PredictiveAnalytics isDarkMode={isDarkMode} />
             ) : (
-              <>
+              <div className="flex flex-col lg:flex-row gap-5 items-stretch">
                 <div className="flex-1 flex flex-col gap-4 min-w-0">
                   <MetricButtons
                     metrics={metricsForWeather}
@@ -255,7 +262,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   currentMetric={currentMetricConfig}
                   isDarkMode={isDarkMode}
                 />
-              </>
+              </div>
             )}
           </div>
         </div>
