@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { CloudSun, Radio } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { Sidebar } from '../components/layout/Sidebar';
@@ -10,7 +10,8 @@ import { WEATHER_METRICS_DATA } from '../constants/metricsData';
 import { NAV_ITEMS } from '../constants/navigation';
 import { WEATHER_PROFILES } from '../constants/weatherProfiles';
 import type { WeatherCondition, WeatherProfile } from '../constants/weatherProfiles';
-import type { MetricType } from '../types';
+import type { MetricConfig, MetricType } from '../types';
+import { getBackendData } from '../lib/backendApi';
 import { fetchLiveWeather } from '../lib/weatherService';
 import type { LiveWeatherData } from '../lib/weatherService';
 import { useApp } from '../context/useApp';
@@ -18,6 +19,100 @@ import { MapPage } from './MapPage';
 import { ProfilePage } from './ProfilePage';
 import { SettingsPage } from './SettingsPage';
 import { CropPlannerPage } from './CropPlannerPage';
+
+interface DailyClimateRecord {
+  date: string;
+  t2m_c: number | null;
+  t2m_max_c: number | null;
+  t2m_min_c: number | null;
+  precipitation_mm_day: number | null;
+  relative_humidity_pct: number | null;
+  wind_speed_m_s: number | null;
+}
+
+interface NasaPowerDailyResponse {
+  latitude: number;
+  longitude: number;
+  elevation_m: number | null;
+  start_date: string;
+  end_date: string;
+  units: Record<string, string>;
+  daily: DailyClimateRecord[];
+}
+
+function toDateInputValue(date: Date): string {
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 10);
+}
+
+const EMPTY_CLIMATE_RECORDS: DailyClimateRecord[] = [];
+
+function nasaPowerMetric(
+  baseMetric: MetricConfig,
+  records: DailyClimateRecord[],
+  metricType: MetricType,
+): MetricConfig {
+  const metricDetails = {
+    humidity: {
+      label: 'Relative humidity',
+      unit: '%',
+      read: (record: DailyClimateRecord) => record.relative_humidity_pct,
+    },
+    precipitation: {
+      label: 'Precipitation',
+      unit: 'mm',
+      read: (record: DailyClimateRecord) => record.precipitation_mm_day,
+    },
+    wind: {
+      label: 'Mean wind speed',
+      unit: 'km/h',
+      read: (record: DailyClimateRecord) =>
+        record.wind_speed_m_s === null ? null : record.wind_speed_m_s * 3.6,
+    },
+  }[metricType];
+
+  const values = records.flatMap((record) => {
+    const value = metricDetails.read(record);
+    return value === null
+      ? []
+      : [{ time: record.date.slice(5), date: record.date, value }];
+  }).sort((left, right) => left.date.localeCompare(right.date));
+  const latest = values.length > 0 ? values[values.length - 1] : null;
+  const maximum = Math.max(1, ...values.map((point) => point.value));
+  const ticks = [0, maximum / 2, maximum];
+  const chartData = values.map(({ time, value }) => ({ time, value }));
+  const formattedValue = latest
+    ? `${latest.value.toLocaleString(undefined, { maximumFractionDigits: 1 })} ${metricDetails.unit}`
+    : '—';
+
+  return {
+    ...baseMetric,
+    currentValue: formattedValue,
+    subValue: latest ? `NASA POWER · ${latest.date}` : 'NASA POWER · no data',
+    status: latest ? `Observed ${latest.date}` : 'No observation available',
+    unit: metricDetails.unit,
+    description: latest
+      ? `NASA POWER reported ${metricDetails.label.toLowerCase()} of ${formattedValue} on ${latest.date}.`
+      : `No NASA POWER ${metricDetails.label.toLowerCase()} observation is available in the recent date range.`,
+    cropImpactSummary: {
+      headline: 'NASA POWER daily observation',
+      impact: latest
+        ? `${metricDetails.label}: ${formattedValue} on ${latest.date}. This is a historical point climate observation.`
+        : 'No observation was returned for this metric in the recent date range.',
+      actionAdvice: 'This climate observation alone is not a crop-specific recommendation.',
+    },
+    primaryAreaTitle: `Daily ${metricDetails.label.toLowerCase()} (${metricDetails.unit})`,
+    primaryMax: maximum,
+    primaryTicks: ticks,
+    primaryData: chartData,
+    distributionData: values.map(({ value }) => ({ val: value })),
+    secondaryTitle: 'NASA POWER daily record',
+    secondaryMax: maximum,
+    secondaryTicks: ticks,
+    secondaryLineData: chartData,
+    secondaryBarData: values.map(({ time, value }) => ({ time, val: value })),
+  };
+}
 
 interface DashboardPageProps {
   isDarkMode: boolean;
@@ -38,6 +133,54 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [liveWeather, setLiveWeather] = useState<LiveWeatherData | null>(null);
   const [isLiveActive, setIsLiveActive] = useState(true);
+  const [nasaPowerData, setNasaPowerData] = useState<NasaPowerDailyResponse | null>(null);
+  const [nasaPowerLoading, setNasaPowerLoading] = useState(true);
+  const [nasaPowerError, setNasaPowerError] = useState<string | null>(null);
+  const [nasaPowerRefreshKey, setNasaPowerRefreshKey] = useState(0);
+
+  const requestRecentClimate = useCallback((signal: AbortSignal) => {
+    const end = new Date();
+    const start = new Date(end);
+    start.setDate(start.getDate() - 7);
+    const params = new URLSearchParams({
+      latitude: String(defaultFarm.center.lat),
+      longitude: String(defaultFarm.center.lng),
+      start_date: toDateInputValue(start),
+      end_date: toDateInputValue(end),
+    });
+
+    return getBackendData<NasaPowerDailyResponse>(
+      `/api/v1/nasa/power/daily?${params.toString()}`,
+      signal,
+    );
+  }, [defaultFarm.center.lat, defaultFarm.center.lng]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void requestRecentClimate(controller.signal)
+      .then((response) => {
+        if (!controller.signal.aborted) {
+          setNasaPowerData(response);
+          setNasaPowerError(null);
+          setNasaPowerLoading(false);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          setNasaPowerError(error instanceof Error ? error.message : 'Unable to load recent NASA POWER data.');
+          setNasaPowerLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [requestRecentClimate, nasaPowerRefreshKey]);
+
+  const refreshTodayClimate = useCallback(() => {
+    setNasaPowerLoading(true);
+    setNasaPowerError(null);
+    setNasaPowerData(null);
+    setNasaPowerRefreshKey((key) => key + 1);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -65,31 +208,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   }, [defaultFarm.center.lat, defaultFarm.center.lng, isLiveActive, onSelectWeather]);
 
   const baseMetrics = WEATHER_METRICS_DATA[currentWeather] || WEATHER_METRICS_DATA.sunny;
+  const recordsForCurrentFarm =
+    nasaPowerData &&
+    nasaPowerData.latitude === defaultFarm.center.lat &&
+    nasaPowerData.longitude === defaultFarm.center.lng
+      ? nasaPowerData.daily
+      : EMPTY_CLIMATE_RECORDS;
   const metricsForWeather = React.useMemo(() => {
-    if (!liveWeather) return baseMetrics;
-
     return {
-      ...baseMetrics,
-      humidity: {
-        ...baseMetrics.humidity,
-        currentValue: isLiveActive
-          ? `${liveWeather.humidity}%`
-          : baseMetrics.humidity.currentValue,
-      },
-      precipitation: {
-        ...baseMetrics.precipitation,
-        currentValue: isLiveActive
-          ? `${liveWeather.precipitation} mm`
-          : baseMetrics.precipitation.currentValue,
-      },
-      wind: {
-        ...baseMetrics.wind,
-        currentValue: isLiveActive
-          ? `${liveWeather.windSpeed} km/h`
-          : baseMetrics.wind.currentValue,
-      },
+      humidity: nasaPowerMetric(baseMetrics.humidity, recordsForCurrentFarm, 'humidity'),
+      precipitation: nasaPowerMetric(baseMetrics.precipitation, recordsForCurrentFarm, 'precipitation'),
+      wind: nasaPowerMetric(baseMetrics.wind, recordsForCurrentFarm, 'wind'),
     };
-  }, [baseMetrics, liveWeather, isLiveActive]);
+  }, [baseMetrics, recordsForCurrentFarm]);
 
   const currentMetricConfig = metricsForWeather[selectedMetric];
   const activeWeatherProfile: WeatherProfile = React.useMemo(() => {
@@ -269,24 +400,29 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 onToggleTheme={onToggleTheme}
               />
             ) : (
-              <div className="flex flex-col lg:flex-row gap-5 items-stretch">
-                <div className="flex-1 flex flex-col gap-4 min-w-0">
-                  <MetricButtons
-                    metrics={metricsForWeather}
-                    selectedMetric={selectedMetric}
-                    onSelectMetric={setSelectedMetric}
+              <>
+                <div className="flex flex-col lg:flex-row gap-5 items-stretch">
+                  <div className="flex-1 flex flex-col gap-4 min-w-0">
+                    <MetricButtons
+                      metrics={metricsForWeather}
+                      selectedMetric={selectedMetric}
+                      onSelectMetric={setSelectedMetric}
+                      isDarkMode={isDarkMode}
+                    />
+                    <HeroForecastCard
+                      isDarkMode={isDarkMode}
+                      weather={activeWeatherProfile}
+                      isClimateLoading={nasaPowerLoading}
+                      climateError={nasaPowerError}
+                      onRefreshClimate={refreshTodayClimate}
+                    />
+                  </div>
+                  <MetricBreakdownPanel
+                    currentMetric={currentMetricConfig}
                     isDarkMode={isDarkMode}
-                  />
-                  <HeroForecastCard
-                    isDarkMode={isDarkMode}
-                    weather={activeWeatherProfile}
                   />
                 </div>
-                <MetricBreakdownPanel
-                  currentMetric={currentMetricConfig}
-                  isDarkMode={isDarkMode}
-                />
-              </div>
+              </>
             )}
           </div>
         </div>

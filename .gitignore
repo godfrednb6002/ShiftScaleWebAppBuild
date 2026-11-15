@@ -27,6 +27,14 @@ downloads/
 eggs/
 .eggs/
 lib/
+!Frontend/src/lib/
+Frontend/src/lib/*
+!Frontend/src/lib/location.ts
+!Frontend/src/lib/nasa.ts
+!Frontend/src/lib/weatherService.ts
+!Frontend/src/lib/profileService.ts
+!Frontend/src/lib/rotationPlannerAdaptive.ts
+!Frontend/src/lib/backendApi.ts
 lib64/
 parts/
 sdist/
