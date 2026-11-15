@@ -19,6 +19,7 @@ import {
 import { ProfileDataService } from '../lib/profileService';
 import { FarmPortfolioView } from './FarmPortfolioView';
 import type { Farm } from '../types';
+import { useApp } from '../context/useApp';
 import shiftScaleWhiteLogo from '../assets/shiftScaleWhiteLogo.png';
 import shiftScaleBlackLogo from '../assets/shiftScaleBlackLogo.png';
 import type {
@@ -41,7 +42,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 }) => {
   // Real persisted profile data
   const [profile, setProfile] = useState<UserProfile>(() => ProfileDataService.getProfile());
-  const [farms] = useState<Farm[]>(() => ProfileDataService.getFarms());
+  const { farms, updateFarm } = useApp();
 
   // View state: 'profile' or 'portfolio' (Page to view listed farms)
   const [viewMode, setViewMode] = useState<'profile' | 'portfolio'>('profile');
@@ -237,6 +238,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         onBack={() => setViewMode('profile')}
         onOpenFarmOnMap={handleOpenFarm}
         onMapNewPlot={() => onSelectNav('Map')}
+        onRenameFarm={(farmId, name) => updateFarm(farmId, { name })}
       />
     );
   }
@@ -529,7 +531,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                         : 'border-emerald-300 bg-[#102414] text-white hover:bg-emerald-950'
                     }`}
                   >
-                    <span>View Listed Farms</span>
+                    <span>View Listed Farms ({farms.length})</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </button>
 

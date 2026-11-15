@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   BookOpen,
@@ -19,13 +19,20 @@ import {
 } from 'lucide-react';
 import { ProfileDataService } from '../lib/profileService';
 import { generateAdaptiveRotationStrategies } from '../lib/rotationPlannerAdaptive';
-import type { Farm } from '../types';
+import { fetchNasaPowerDailyClimate } from '../lib/api';
+import type { NasaPowerDailyResponse } from '../lib/api';
+import { useApp } from '../context/useApp';
 
 interface CropPlannerPageProps {
   isDarkMode: boolean;
 }
 
 export type StrategyKey = 'baseline' | 'water_resilience' | 'soil_restoration' | 'income_diversified';
+
+type ClimateState =
+  | { status: 'loading'; request: number; farmKey: string }
+  | { status: 'error'; request: number; farmKey: string; error: string }
+  | { status: 'ready'; request: number; farmKey: string; response: NasaPowerDailyResponse };
 
 interface RotationStrategy {
   key: StrategyKey;
@@ -393,11 +400,19 @@ const FARMING_SYSTEM_OPTIONS = [
 ];
 
 export function CropPlannerPage({ isDarkMode }: CropPlannerPageProps) {
-  const [farms] = useState<Farm[]>(() => ProfileDataService.getFarms());
+  const { farms, defaultFarm } = useApp();
   const [selectedFarmId, setSelectedFarmId] = useState<string>(() => {
     const defaultId = ProfileDataService.getSelectedFarmId();
-    return defaultId || farms[0]?.id || 'farm_ashanti_01';
+    return defaultId && farms.some((farm) => farm.id === defaultId)
+      ? defaultId
+      : defaultFarm.id;
   });
+  const [climateState, setClimateState] = useState<ClimateState>({
+    status: 'loading',
+    request: 0,
+    farmKey: '',
+  });
+  const [climateRequest, setClimateRequest] = useState(0);
 
   const [activeStrategyKey, setActiveStrategyKey] = useState<StrategyKey>('water_resilience');
   const [showGlossary, setShowGlossary] = useState<boolean>(false);
@@ -412,8 +427,71 @@ export function CropPlannerPage({ isDarkMode }: CropPlannerPageProps) {
   const [newCropInput, setNewCropInput] = useState<string>('');
 
   const selectedFarm = useMemo(() => {
-    return farms.find((f) => f.id === selectedFarmId) || farms[0];
-  }, [farms, selectedFarmId]);
+    return farms.find((f) => f.id === selectedFarmId) || defaultFarm;
+  }, [farms, selectedFarmId, defaultFarm]);
+  const climateFarmKey = `${selectedFarm.center.lat}:${selectedFarm.center.lng}`;
+  const climateIsCurrent =
+    climateState.request === climateRequest && climateState.farmKey === climateFarmKey;
+  const climateStatus = climateIsCurrent ? climateState.status : 'loading';
+  const climateResponse =
+    climateIsCurrent && climateState.status === 'ready' ? climateState.response : null;
+  const climateError =
+    climateIsCurrent && climateState.status === 'error' ? climateState.error : null;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const request = climateRequest;
+    const farmKey = `${selectedFarm.center.lat}:${selectedFarm.center.lng}`;
+    const endDate = new Date();
+    endDate.setUTCDate(endDate.getUTCDate() - 3);
+    const startDate = new Date(endDate);
+    startDate.setUTCDate(startDate.getUTCDate() - 29);
+    const toDateString = (date: Date) => date.toISOString().slice(0, 10);
+
+    fetchNasaPowerDailyClimate(
+      selectedFarm.center.lat,
+      selectedFarm.center.lng,
+      toDateString(startDate),
+      toDateString(endDate),
+      controller.signal
+    )
+      .then((response) => setClimateState({ status: 'ready', request, farmKey, response }))
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setClimateState({
+          status: 'error',
+          request,
+          farmKey,
+          error: error instanceof Error ? error.message : 'Could not load NASA POWER data.',
+        });
+      });
+
+    return () => controller.abort();
+  }, [selectedFarm.center.lat, selectedFarm.center.lng, climateRequest]);
+
+  const climateSummary = useMemo(() => {
+    if (!climateResponse) return null;
+    const records = climateResponse.daily;
+    const average = (values: Array<number | null>) => {
+      const observed = values.filter((value): value is number => value !== null);
+      return observed.length
+        ? observed.reduce((total, value) => total + value, 0) / observed.length
+        : null;
+    };
+    const precipitation = records
+      .map((record) => record.precipitation_mm_day)
+      .filter((value): value is number => value !== null);
+
+    return {
+      meanTemperature: average(records.map((record) => record.t2m_c)),
+      precipitationTotal: precipitation.length
+        ? precipitation.reduce((total, value) => total + value, 0)
+        : null,
+      meanHumidity: average(records.map((record) => record.relative_humidity_pct)),
+      meanWind: average(records.map((record) => record.wind_speed_m_s)),
+      observationCount: records.length,
+    };
+  }, [climateResponse]);
 
   const hasGeneratedRotation = Boolean(customStrategies);
   const currentStrategies = customStrategies;
@@ -489,7 +567,7 @@ export function CropPlannerPage({ isDarkMode }: CropPlannerPageProps) {
                 Crop Rotation Planning Prototype
               </span>
               <span className={`text-xs ${theme.muted}`}>
-                Potential data sources (not connected): NASA POWER · SMAP · ECOSTRESS · Landsat/MODIS · SRTM
+                NASA POWER recent climate is connected; rotation strategies remain illustrative.
               </span>
             </div>
             <h1 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight">
@@ -549,6 +627,89 @@ export function CropPlannerPage({ isDarkMode }: CropPlannerPageProps) {
           </div>
         </div>
       </div>
+
+      <section
+        aria-live="polite"
+        className={`rounded-2xl border p-5 sm:p-6 ${theme.panel}`}
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-bold">NASA POWER recent climate</h2>
+            <p className={`mt-1 text-xs ${theme.muted}`}>
+              Daily observations for {selectedFarm.name} at {selectedFarm.center.lat.toFixed(3)}, {selectedFarm.center.lng.toFixed(3)}
+              {climateResponse &&
+                ` · ${climateResponse.start_date} to ${climateResponse.end_date}`}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setClimateRequest((request) => request + 1)}
+            disabled={climateStatus === 'loading'}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold disabled:cursor-wait disabled:opacity-60 ${
+              isDarkMode
+                ? 'border-white/15 bg-white/5 text-emerald-300 hover:bg-white/10'
+                : 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+            }`}
+          >
+            {climateStatus === 'loading' ? 'Loading observations…' : 'Refresh'}
+          </button>
+        </div>
+
+        {climateStatus === 'error' ? (
+          <p role="alert" className="mt-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
+            NASA POWER data could not be loaded: {climateError}
+          </p>
+        ) : climateStatus === 'loading' ? (
+          <div className={`mt-4 flex items-center gap-2 text-sm ${theme.muted}`}>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Requesting farm-specific observations from the backend…
+          </div>
+        ) : climateSummary ? (
+          climateSummary.observationCount === 0 ? (
+            <p className={`mt-4 text-sm ${theme.muted}`}>
+              NASA POWER returned no daily observations for this date range.
+            </p>
+          ) : (
+            <>
+              <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                {[
+                  {
+                    label: 'Mean temperature',
+                    value: climateSummary.meanTemperature === null ? 'No data' : `${climateSummary.meanTemperature.toFixed(1)} °C`,
+                  },
+                  {
+                    label: 'Observed precipitation total',
+                    value: climateSummary.precipitationTotal === null ? 'No data' : `${climateSummary.precipitationTotal.toFixed(1)} mm`,
+                  },
+                  {
+                    label: 'Mean relative humidity',
+                    value: climateSummary.meanHumidity === null ? 'No data' : `${climateSummary.meanHumidity.toFixed(0)}%`,
+                  },
+                  {
+                    label: 'Mean wind speed',
+                    value: climateSummary.meanWind === null ? 'No data' : `${climateSummary.meanWind.toFixed(1)} m/s`,
+                  },
+                ].map((metric) => (
+                  <div
+                    key={metric.label}
+                    className={`rounded-xl border p-3 ${theme.subPanel}`}
+                  >
+                    <p className={`text-[10px] font-bold uppercase tracking-wide ${theme.subtle}`}>
+                      {metric.label}
+                    </p>
+                    <p className="mt-1 text-lg font-bold text-emerald-500">
+                      {metric.value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <p className={`mt-3 text-[11px] ${theme.subtle}`}>
+                NASA POWER · {climateSummary.observationCount} daily records returned. Totals and averages use available observations only; these recent values are context, not a long-term climatology or a crop recommendation.
+              </p>
+            </>
+          )
+        ) : null}
+      </section>
 
       {/* Interactive crop and farming system scenario builder */}
       <div className={`rounded-2xl border p-5 sm:p-6 transition-all ${isDarkMode ? 'bg-[#0f1f14] border-emerald-500/30 shadow-lg shadow-black/40' : 'bg-[#f0f7ef] border-emerald-300/80 shadow-md'}`}>
@@ -1171,7 +1332,7 @@ export function CropPlannerPage({ isDarkMode }: CropPlannerPageProps) {
             <div className={`mt-6 pt-4 border-t ${theme.line} flex flex-col sm:flex-row items-center justify-between gap-3`}>
               <div className="flex items-center gap-2 text-xs text-emerald-400">
                 <CheckCircle2 size={16} />
-                <span>Scenario preview for <strong>{selectedFarm?.name || 'selected farm'}</strong>; no NASA POWER climatology is loaded.</span>
+                <span>Scenario preview for <strong>{selectedFarm.name}</strong>; recent NASA POWER observations are context only.</span>
               </div>
 
               <div className="flex items-center gap-3">

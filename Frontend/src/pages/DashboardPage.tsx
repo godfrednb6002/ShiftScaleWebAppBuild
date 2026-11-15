@@ -13,6 +13,7 @@ import type { WeatherCondition, WeatherProfile } from '../constants/weatherProfi
 import type { MetricType } from '../types';
 import { fetchLiveWeather } from '../lib/weatherService';
 import type { LiveWeatherData } from '../lib/weatherService';
+import { fetchApiHealth } from '../lib/api';
 import { useApp } from '../context/useApp';
 import { MapPage } from './MapPage';
 import { ProfilePage } from './ProfilePage';
@@ -38,6 +39,33 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [liveWeather, setLiveWeather] = useState<LiveWeatherData | null>(null);
   const [isLiveActive, setIsLiveActive] = useState(true);
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'connected' | 'offline'>('checking');
+
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+    const checkBackend = () => {
+      fetchApiHealth(controller.signal)
+        .then((health) => {
+          if (isMounted) {
+            setBackendStatus(health.status === 'ok' ? 'connected' : 'offline');
+          }
+        })
+        .catch(() => {
+          if (isMounted && !controller.signal.aborted) {
+            setBackendStatus('offline');
+          }
+        });
+    };
+
+    checkBackend();
+    const interval = setInterval(checkBackend, 60 * 1000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      controller.abort();
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -180,6 +208,25 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 <CloudSun className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Simulate:</span>
               </div>
+              <span
+                title={`Backend API ${backendStatus}`}
+                className={`flex items-center gap-1.5 px-2 text-[10px] font-semibold whitespace-nowrap ${
+                  backendStatus === 'connected'
+                    ? 'text-emerald-700 dark:text-emerald-300'
+                    : backendStatus === 'offline'
+                      ? 'text-rose-700 dark:text-rose-300'
+                      : 'text-slate-500 dark:text-slate-400'
+                }`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${
+                  backendStatus === 'connected'
+                    ? 'bg-emerald-500'
+                    : backendStatus === 'offline'
+                      ? 'bg-rose-500'
+                      : 'bg-slate-400 animate-pulse'
+                }`} />
+                API {backendStatus}
+              </span>
               {weatherOptions.map((weather) => {
                 const isSelected = !isLiveActive && currentWeather === weather;
                 const profile = WEATHER_PROFILES[weather];

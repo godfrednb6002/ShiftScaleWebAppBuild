@@ -11,7 +11,6 @@ import {
   X,
 } from 'lucide-react';
 import type { Farm } from '../types';
-import { ProfileDataService } from '../lib/profileService';
 import shiftScaleWhiteLogo from '../assets/shiftScaleWhiteLogo.png';
 import shiftScaleBlackLogo from '../assets/shiftScaleBlackLogo.png';
 
@@ -21,7 +20,7 @@ interface FarmPortfolioViewProps {
   onBack: () => void;
   onOpenFarmOnMap: (farm: Farm) => void;
   onMapNewPlot: () => void;
-  onFarmsUpdated?: (updatedFarms: Farm[]) => void;
+  onRenameFarm: (farmId: string, name: string) => void;
 }
 
 export const FarmPortfolioView: React.FC<FarmPortfolioViewProps> = ({
@@ -30,9 +29,9 @@ export const FarmPortfolioView: React.FC<FarmPortfolioViewProps> = ({
   onBack,
   onOpenFarmOnMap,
   onMapNewPlot,
-  onFarmsUpdated,
+  onRenameFarm,
 }) => {
-  const [farmsList, setFarmsList] = useState<Farm[]>(initialFarms);
+  const farmsList = initialFarms;
   const [editingFarmId, setEditingFarmId] = useState<string | null>(null);
   const [editingNameValue, setEditingNameValue] = useState<string>('');
 
@@ -51,15 +50,9 @@ export const FarmPortfolioView: React.FC<FarmPortfolioViewProps> = ({
   const saveFarmName = (farmId: string) => {
     const trimmed = editingNameValue.trim();
     if (!trimmed) return;
-    const ok = ProfileDataService.updateFarmName(farmId, trimmed);
-    if (ok) {
-      const updated = farmsList.map((f) =>
-        f.id === farmId ? { ...f, name: trimmed, updatedAt: new Date().toISOString() } : f
-      );
-      setFarmsList(updated);
-      onFarmsUpdated?.(updated);
-    }
+    onRenameFarm(farmId, trimmed);
     setEditingFarmId(null);
+    setEditingNameValue('');
   };
 
   const cardBase = `rounded-3xl border p-6 transition-all duration-300 shadow-xl backdrop-blur-2xl ${
